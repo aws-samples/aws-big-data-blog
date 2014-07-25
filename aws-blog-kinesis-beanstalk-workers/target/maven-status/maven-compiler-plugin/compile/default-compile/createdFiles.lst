@@ -1,0 +1,2 @@
+com/amazon/kinesis/beanstalk/connector/KinesisWorkerServletInitiator.class
+com/amazon/kinesis/beanstalk/connector/KinesisWorkerServletInitiator$1ConsumerRunner.class
