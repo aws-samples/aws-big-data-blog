@@ -1,0 +1,5 @@
+Multi-AZ or Multi-region Redshift.
+
+For detailed instructions please see http://blogs.amazon.com/bigdata/post/Tx13ZDHZANSX9UX/Building-Multi-AZ-or-Multi-Region-Amazon-Redshift-Clusters
+
+The Cloudformation template is used to deploy the Pyhton script onto ec2-instances in Autoscaling groups to serve modification queries from Kinesis to Redshift clusters to keep them in sync. 
