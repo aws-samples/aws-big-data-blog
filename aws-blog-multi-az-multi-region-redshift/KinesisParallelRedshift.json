@@ -288,7 +288,7 @@
 							"roleName=", { "Ref": "IAMRole"}, "\n",
 							"EOF\n",
 							"chown ec2-user /home/ec2-user/defaults.cfg\n",
-							"wget https://github.com/awslabs/aws-big-data-blog/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
+							"https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
                             "chown ec2-user /home/ec2-user/loader.py\n",
 							"echo \"su ec2-user -c 'python /home/ec2-user/loader.py'\" >> /etc/rc.local\n",
 							"su ec2-user -c 'python /home/ec2-user/loader.py'"
@@ -338,7 +338,7 @@
 							"roleName=", { "Ref": "IAMRole"}, "\n",
 							"EOF\n",
 							"chown ec2-user /home/ec2-user/defaults.cfg\n",
-							"wget https://github.com/awslabs/aws-big-data-blog/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
+							"wget https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
                             "chown ec2-user /home/ec2-user/loader.py\n",
 							"echo \"su ec2-user -c 'python /home/ec2-user/loader.py'\" >> /etc/rc.local\n",
 							"su ec2-user -c 'python /home/ec2-user/loader.py'"
