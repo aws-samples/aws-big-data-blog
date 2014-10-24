@@ -1,0 +1,366 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This sample template creates a demo installation of a Kinesis stream, two Kinesis enabled subscribers which will apply queries to parallel Redshift clusters.",
+    "Parameters": {
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the Kinesis enabled application instances",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "255",
+            "AllowedPattern": "[\\x20-\\x7E]*",
+            "ConstraintDescription": "can contain only ASCII characters."
+        },
+        "InstanceType" : {
+            "Default": "m3.medium",
+            "Type": "String",
+            "Description": "Instance Class",
+            "AllowedValues": [
+                "t1.micro",
+                "m1.small",
+                "m1.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c1.medium",
+                "c1.xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "cc2.8xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "cr1.8xlarge"
+            ],
+            "ConstraintDescription": "must select a valid instance type."
+        },
+        "AccessLocation": {
+            "Description": " The IP address range that can be used to access the instance via SSH",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "Default": "0.0.0.0/0",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        },
+        "RedshiftCluster1Endpoint" : {
+        	"Type": "String",
+        	"Description": "Endpoint to access first Redshift Cluster"        	
+        },
+        "RedshiftCluster1AZ" : {
+        	"Type" : "String",
+        	"Description" : "AZ of first Redsfhit Cluster e.g us-east-1b",
+        	 "AllowedValues": [
+                "us-east-1a",
+                "us-east-1b",
+                "us-east-1c",
+                "us-east-1d",
+                "us-east-1e",
+                "us-west-1a",
+                "us-west-1b",
+                "us-west-1c",
+				"us-west-2a",
+				"us-west-2b",
+				"us-west-2c",
+				"eu-west-1a",
+                "eu-west-1b",
+				"eu-west-1c",
+                "ap-southeast-1a",
+                "ap-southeast-1b",
+				"ap-southeast-2a",
+                "ap-southeast-2b",
+				"ap-northeast-1a",
+                "ap-northeast-1b",
+				"ap-northeast-1c",
+                "as-east-1a",
+				"as-east-1b"    
+			]
+		},
+		"RedshiftCluster2Endpoint" : {
+        	"Type": "String",
+        	"Description": "Endpoint to access second Redshift Cluster"        	
+        },
+        "RedshiftCluster2AZ" : {
+        	"Type" : "String",
+        	"Description" : "AZ of the second Redsfhit Cluster e.g us-east-1c",
+        	 "AllowedValues": [
+                "us-east-1a",
+                "us-east-1b",
+                "us-east-1c",
+                "us-east-1d",
+                "us-east-1e",
+                "us-west-1a",
+                "us-west-1b",
+                "us-west-1c",
+				"us-west-2a",
+				"us-west-2b",
+				"us-west-2c",
+				"eu-west-1a",
+                "eu-west-1b",
+				"eu-west-1c",
+                "ap-southeast-1a",
+                "ap-southeast-1b",
+				"ap-southeast-2a",
+                "ap-southeast-2b",
+				"ap-northeast-1a",
+                "ap-northeast-1b",
+				"ap-northeast-1c",
+                "as-east-1a",
+				"as-east-1b"    ]
+		
+        },
+        "DBUsername": {
+            "Default": "admin",
+            "Type": "String",
+            "Description": "Redshift Username"
+        },
+		"DBPassword" : {
+            "NoEcho": "true",
+			"Description" : "The Redshift database account password",
+			"Type": "String"
+		},
+		"DBName":  {
+            "Default": "mydb",
+            "Type": "String",
+            "Description": "Redshift Databasename"
+		}
+    },
+	"Mappings": {
+    	"AWSInstanceType2Arch" : {
+         "t1.micro"    : { "Arch" : "64" },
+         "m1.small"    : { "Arch" : "64" },
+         "m1.medium"   : { "Arch" : "64" },
+         "m1.large"    : { "Arch" : "64" },
+         "m1.xlarge"   : { "Arch" : "64" },
+         "m2.xlarge"   : { "Arch" : "64" },
+         "m2.2xlarge"  : { "Arch" : "64" },
+         "m2.4xlarge"  : { "Arch" : "64" },
+         "m3.medium"   : { "Arch" : "64" },
+         "m3.xlarge"   : { "Arch" : "64" },
+         "m3.2xlarge"  : { "Arch" : "64" },
+         "c1.medium"   : { "Arch" : "64" },
+         "c1.xlarge"   : { "Arch" : "64" }
+    },     
+		"AWSRegionArch2AMI" : {
+        "us-east-1"      : { "32" : "ami-aba768c2", "64" : "ami-81a768e8" },
+        "us-west-1"      : { "32" : "ami-458fd300", "64" : "ami-b18ed2f4" },
+        "us-west-2"      : { "32" : "ami-fcff72cc", "64" : "ami-feff72ce" },
+        "eu-west-1"      : { "32" : "ami-018bb975", "64" : "ami-998bb9ed" },
+        "sa-east-1"      : { "32" : "ami-a039e6bd", "64" : "ami-a239e6bf" },
+        "ap-southeast-1" : { "32" : "ami-425a2010", "64" : "ami-5e5a200c" },
+        "ap-southeast-2" : { "32" : "ami-f98512c3", "64" : "ami-43851279" },
+        "ap-northeast-1" : { "32" : "ami-7871c579", "64" : "ami-7671c577" }
+      }
+    },
+    "Resources": {   
+		"KinesisStream" : {
+			"Type" : "AWS::Kinesis::Stream",
+			"Properties" : {
+			"ShardCount" : "1"}
+		  },
+		"DynamoDBTable" : {
+			"Type" : "AWS::DynamoDB::Table",
+			"Properties" : {
+				"AttributeDefinitions" : [
+			  {
+				"AttributeName" : "redShiftEndpoint",
+				"AttributeType" : "S"
+			  }
+			],
+			"KeySchema" : [
+			  {
+				"AttributeName" : "redShiftEndpoint",
+				"KeyType" : "HASH"
+			  }
+			],
+			"ProvisionedThroughput" : {
+			  "ReadCapacityUnits" : "10",
+			  "WriteCapacityUnits" : "5"
+			}
+		  }
+		},
+		"IAMRole": {
+				"Type": "AWS::IAM::Role",
+				"Properties": {
+					"AssumeRolePolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [
+							{
+								"Effect": "Allow",
+								"Principal": {
+									"Service": [
+										"ec2.amazonaws.com"
+									]
+								},
+								"Action": [
+									"sts:AssumeRole"
+								]
+							}
+						]
+					},
+					"Path": "/",
+					"Policies": [
+						{
+							"PolicyName": "Kinesispolicy",
+							"PolicyDocument": {
+								"Version": "2012-10-17",
+								"Statement": [
+									{
+                  "Effect": "Allow",
+                  "Action": "*",
+                  "Resource": "*"
+                },{
+								       "Effect" : "Allow",
+										"Action" : "kinesis:*",
+										"Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
+									},
+	                                {
+										 "Effect" : "Allow",
+					                     "Action": ["dynamodb:*"],
+										 "Resource" : { "Fn::Join" : [ "", [ 
+								          "arn:aws:dynamodb:", { "Ref" : "AWS::Region" } , ":", { "Ref" : "AWS::AccountId" }, ":table/", { "Ref": "DynamoDBTable" } ]]}
+									}									]
+							}
+						}]
+		            }	
+			},
+		"InstanceProfile": {
+				"Type": "AWS::IAM::InstanceProfile",
+				"Properties": {
+					"Path": "/",
+					"Roles": [
+						{ "Ref": "IAMRole" }
+					]
+				}
+			},
+		"InstanceSecurityGroup": {
+				"Type": "AWS::EC2::SecurityGroup",
+				"Properties": {
+					"GroupDescription": "Enable Access to SSH access via port 22",
+					"SecurityGroupIngress": [
+						{ "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": { "Ref": "AccessLocation" } }
+				
+					]
+				}
+			},
+	    "AZ1KinesisReader" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : [{ "Ref" : "RedshiftCluster1AZ" }],
+        "LaunchConfigurationName" : { "Ref" : "AZ1LaunchConfig" },
+        "MinSize" : "1",
+        "MaxSize" : "1"
+        }
+      },
+        "AZ1LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+					"KeyName": { "Ref": "KeyName" },
+					"SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+			   		"ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+											  { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" },"Arch" ] } ] },
+					"IamInstanceProfile": { "Ref": "InstanceProfile" },
+					"InstanceType": { "Ref" : "InstanceType" },
+					"UserData" : { "Fn::Base64" : { "Fn::Join" : 
+						["",
+							[
+							"#!/bin/bash -ex","\n",
+							"yum update -y\n",
+							"yum -y install python-devel postgresql-devel gcc aws-cli\n",
+							"easy_install pip\n",
+							"pip install psycopg2 configparser\n",
+							"cat <<EOF > /home/ec2-user/defaults.cfg\n",
+							"[db]\n",
+							"dbUser=", { "Ref": "DBUsername" },"\n",
+							"dbPassword=", { "Ref": "DBPassword" },"\n",
+							"dbName=", { "Ref": "DBName" },"\n",
+							"dbHost=", { "Ref": "RedshiftCluster2Endpoint" },"\n",
+							"[kenisis]\n",
+							"steamName=", { "Ref": "KinesisStream" }, "\n",
+							"[dynamodb2]\n",
+							"tableName =", { "Ref": "DynamoDBTable"}, "\n",
+							"[iam]\n",
+							"roleName=", { "Ref": "IAMRole"}, "\n",
+							"EOF\n",
+							"chown ec2-user /home/ec2-user/defaults.cfg\n",
+							"wget https://github.com/awslabs/aws-big-data-blog/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
+                            "chown ec2-user /home/ec2-user/loader.py\n",
+							"echo \"su ec2-user -c 'python /home/ec2-user/loader.py'\" >> /etc/rc.local\n",
+							"su ec2-user -c 'python /home/ec2-user/loader.py'"
+							]
+						]
+						}
+					}
+				}
+			},
+        "AZ2KinesisReader" : {
+				"Type" : "AWS::AutoScaling::AutoScalingGroup",
+				"Properties" : {
+				"AvailabilityZones" : [ { "Ref":"RedshiftCluster2AZ" } ],
+				"LaunchConfigurationName" : { "Ref" : "AZ2LaunchConfig" },
+				"MinSize" : "1",
+				"MaxSize" : "1"
+				}
+			},
+        "AZ2LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+      "KeyName": { "Ref": "KeyName" },
+					"SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+					"ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+								 { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ]}]},
+					"IamInstanceProfile": { "Ref": "InstanceProfile" },
+					"InstanceType": { "Ref" : "InstanceType" },
+					"UserData" : { "Fn::Base64" : { "Fn::Join" : 
+						["",
+							[
+							"#!/bin/bash -ex","\n",
+							"yum update -y\n",
+							"yum -y install python-devel postgresql-devel gcc aws-cli\n",
+							"easy_install pip\n",
+							"pip install psycopg2 configparser\n",
+							"cat <<EOF > /home/ec2-user/defaults.cfg\n",
+							"[db]\n",
+							"dbUser=", { "Ref": "DBUsername" },"\n",
+							"dbPassword=", { "Ref": "DBPassword" },"\n",
+							"dbName=", { "Ref": "DBName" },"\n",
+							"dbHost=", { "Ref": "RedshiftCluster2Endpoint" },"\n",
+							"[kenisis]\n",
+							"steamName=", { "Ref": "KinesisStream" }, "\n",
+							"[dynamodb2]\n",
+							"tableName =", { "Ref": "DynamoDBTable"}, "\n",
+							"[iam]\n",
+							"roleName=", { "Ref": "IAMRole"}, "\n",
+							"EOF\n",
+							"chown ec2-user /home/ec2-user/defaults.cfg\n",
+							"wget https://github.com/awslabs/aws-big-data-blog/aws-blog-multi-az-multi-region-redshift/loader.py -P /home/ec2-user\n",
+                            "chown ec2-user /home/ec2-user/loader.py\n",
+							"echo \"su ec2-user -c 'python /home/ec2-user/loader.py'\" >> /etc/rc.local\n",
+							"su ec2-user -c 'python /home/ec2-user/loader.py'"
+							]
+						]
+						}
+					}
+				}	
+			}	
+    },			
+      "Outputs": {
+       "KinesisStreamName": {
+            "Description": "The name of the created Kinesis Stream",
+            "Value": { "Ref": "KinesisStream" }
+        },
+        "DynamoDBTableName": {
+            "Description": "The name of the created DynamoDB Table",
+            "Value": { "Ref": "DynamoDBTable" }
+        },
+        "IAMRoleName": {
+            "Description": "The name of the created IAM Role",
+            "Value": { "Ref": "IAMRole" }
+        }
+    }
+}
