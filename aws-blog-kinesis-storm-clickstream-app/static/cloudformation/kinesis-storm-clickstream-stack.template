@@ -1,0 +1,967 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09", 
+    "Description": "Real-time sliding window visualization over streaming clickstream data: Amazon Kinesis, Apache Storm, Amazon ElasticCache Redis and Epoch+D3", 
+    "Mappings": {
+        "AWSInstanceType2Arch": {
+            "m3.2xlarge": {
+                "Arch": "64HVM"
+            }, 
+            "m3.large": {
+                "Arch": "64HVM"
+            }, 
+            "m3.medium": {
+                "Arch": "64HVM"
+            }, 
+            "m3.xlarge": {
+                "Arch": "64HVM"
+            }, 
+            "t2.medium": {
+                "Arch": "64HVM"
+            }, 
+            "t2.micro": {
+                "Arch": "64HVM"
+            }, 
+            "t2.small": {
+                "Arch": "64HVM"
+            }
+        }, 
+        "AWSRegionArch2AMI": {
+            "ap-northeast-1": {
+                "64HVM": "ami-29dc9228"
+            }, 
+            "ap-southeast-1": {
+                "64HVM": "ami-a6b6eaf4"
+            }, 
+            "ap-southeast-2": {
+                "64HVM": "ami-d9fe9be3"
+            }, 
+            "eu-west-1": {
+                "64HVM": "ami-892fe1fe"
+            }, 
+            "sa-east-1": {
+                "64HVM": "ami-c9e649d4"
+            }, 
+            "us-east-1": {
+                "64HVM": "ami-76817c1e"
+            }, 
+            "us-west-1": {
+                "64HVM": "ami-f0d3d4b5"
+            }, 
+            "us-west-2": {
+                "64HVM": "ami-d13845e1"
+            }
+        }
+    }, 
+    "Outputs": {
+        "StormURL": {
+            "Description": "URL to the Storm UI", 
+            "Value": {
+                "Fn::Join": [
+                    "", 
+                    [
+                        "http://", 
+                        {
+                            "Fn::GetAtt": [
+                                "StormInstance", 
+                                "PublicDnsName"
+                            ]
+                        }, 
+                        ":8080"
+                    ]
+                ]
+            }
+        }, 
+        "StreamName": {
+            "Description": "Name of the Kinesis Stream", 
+            "Value": {
+                "Ref": "KinesisStream"
+            }
+        }, 
+        "VisualizationURL": {
+            "Description": "URL to the Visualization", 
+            "Value": {
+                "Fn::Join": [
+                    "", 
+                    [
+                        "http://", 
+                        {
+                            "Fn::GetAtt": [
+                                "NodeJsInstance", 
+                                "PublicDnsName"
+                            ]
+                        }, 
+                        ":9000"
+                    ]
+                ]
+            }
+        }
+    }, 
+    "Parameters": {
+        "ClusterNodeType": {
+            "AllowedValues": [
+                "cache.m1.small", 
+                "cache.m1.medium", 
+                "cache.m1.large", 
+                "cache.m1.xlarge", 
+                "cache.m2.xlarge", 
+                "cache.m2.2xlarge", 
+                "cache.m2.4xlarge", 
+                "cache.m3.xlarge", 
+                "cache.m3.2xlarge"
+            ], 
+            "ConstraintDescription": "Please select a valid Cache Node type.", 
+            "Default": "cache.m1.small", 
+            "Description": "Node type for the Redis Cluster", 
+            "Type": "String"
+        }, 
+        "KeyName": {
+            "AllowedPattern": "[\\x20-\\x7E]*", 
+            "ConstraintDescription": "can contain only ASCII characters.", 
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access", 
+            "MaxLength": "255", 
+            "MinLength": "0", 
+            "Type": "String"
+        }, 
+        "NodeJsInstanceType": {
+            "AllowedValues": [
+                "t2.micro", 
+                "t2.small", 
+                "t2.medium"
+            ], 
+            "ConstraintDescription": "Please select an instance from the EC2 t2 family", 
+            "Default": "t2.micro", 
+            "Description": "NodeJS instance type", 
+            "Type": "String"
+        }, 
+        "ProducerInstanceType": {
+            "AllowedValues": [
+                "t2.micro", 
+                "t2.small", 
+                "t2.medium"
+            ], 
+            "ConstraintDescription": "Please select an instance from the EC2 t2 family", 
+            "Default": "t2.micro", 
+            "Description": "Producer instance type", 
+            "Type": "String"
+        }, 
+        "SSHLocation": {
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})", 
+            "ConstraintDescription": "Please provide a valid IP CIDR range of the form x.x.x.x/x.", 
+            "Default": "0.0.0.0/0", 
+            "Description": "The IP address range that can be used to SSH to the EC2 instances", 
+            "MaxLength": "18", 
+            "MinLength": "9", 
+            "Type": "String"
+        }, 
+        "StormInstanceType": {
+            "AllowedValues": [
+                "m3.medium", 
+                "m3.large", 
+                "m3.xlarge", 
+                "m3.2xlarge"
+            ], 
+            "ConstraintDescription": "Please select an instance from the EC2 m3 family", 
+            "Default": "m3.large", 
+            "Description": "Storm instance type", 
+            "Type": "String"
+        }
+    }, 
+    "Resources": {
+        "AttachGateway": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                }, 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        }, 
+        "InstanceIAMRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ], 
+                            "Effect": "Allow", 
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ], 
+                    "Version": "2012-10-17"
+                }, 
+                "Path": "/", 
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "kinesis:*"
+                                    ], 
+                                    "Effect": "Allow", 
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "", 
+                                            [
+                                                "arn:aws:kinesis:", 
+                                                {
+                                                    "Ref": "AWS::Region"
+                                                }, 
+                                                ":", 
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                }, 
+                                                ":stream/", 
+                                                {
+                                                    "Ref": "KinesisStream"
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                }, 
+                                {
+                                    "Action": [
+                                        "elasticache:DescribeCacheClusters"
+                                    ], 
+                                    "Effect": "Allow", 
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                }
+                            ]
+                        }, 
+                        "PolicyName": "KinesisStreamAccess"
+                    }
+                ]
+            }, 
+            "Type": "AWS::IAM::Role"
+        }, 
+        "InstanceProfile": {
+            "Properties": {
+                "Path": "/", 
+                "Roles": [
+                    {
+                        "Ref": "InstanceIAMRole"
+                    }
+                ]
+            }, 
+            "Type": "AWS::IAM::InstanceProfile"
+        }, 
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        }, 
+        "KinesisStream": {
+            "Properties": {
+                "ShardCount": "2"
+            }, 
+            "Type": "AWS::Kinesis::Stream"
+        }, 
+        "NodeJsInstance": {
+            "DependsOn": "StormInstance", 
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "config": {
+                        "files": {
+                            "/mnt/clickstream-demo/index.html": {
+                                "group": "root", 
+                                "mode": "000755", 
+                                "owner": "root", 
+                                "source": "https://s3.amazonaws.com/kinesis-storm-clickstream/index.html"
+                            }, 
+                            "/mnt/clickstream-demo/node-app.js": {
+                                "group": "root", 
+                                "mode": "000755", 
+                                "owner": "root", 
+                                "source": "https://s3.amazonaws.com/kinesis-storm-clickstream/node-app.js"
+                            }
+                        }
+                    }
+                }
+            }, 
+            "Properties": {
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                }, 
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI", 
+                        {
+                            "Ref": "AWS::Region"
+                        }, 
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch", 
+                                {
+                                    "Ref": "NodeJsInstanceType"
+                                }, 
+                                "Arch"
+                            ]
+                        }
+                    ]
+                }, 
+                "InstanceType": {
+                    "Ref": "NodeJsInstanceType"
+                }, 
+                "KeyName": {
+                    "Ref": "KeyName"
+                }, 
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true", 
+                        "DeleteOnTermination": "true", 
+                        "DeviceIndex": "0", 
+                        "GroupSet": [
+                            {
+                                "Ref": "NodeJsSecurityGroup"
+                            }
+                        ], 
+                        "SubnetId": {
+                            "Ref": "PublicSubnet"
+                        }
+                    }
+                ], 
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "", 
+                            [
+                                "#!/bin/bash\n", 
+                                "\n", 
+                                "function error_exit\n", 
+                                "{\n", 
+                                "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", 
+                                {
+                                    "Ref": "NodeJsWaitHandle"
+                                }, 
+                                "'\n", 
+                                "  exit 1\n", 
+                                "}\n", 
+                                "\n", 
+                                "## Install and Update CloudFormation\n", 
+                                "yum update -y aws-cfn-bootstrap\n", 
+                                "\n", 
+                                "## Run CloudFormation Init\n", 
+                                "/opt/aws/bin/cfn-init -v -s ", 
+                                {
+                                    "Ref": "AWS::StackName"
+                                }, 
+                                " -r NodeJsInstance", 
+                                "   --region ", 
+                                {
+                                    "Ref": "AWS::Region"
+                                }, 
+                                " > /home/ec2-user/cfn-init.log 2>&1 || error_exit 'Failed to run cfn-init.See cfn-init.log for details'\n", 
+                                "\n", 
+                                "## Installing Node Js\n", 
+                                "yum install -y nodejs npm --enablerepo=epel > /home/ec2-user/node-install.log 2>&1 || error_exit 'Failed to install NodeJs.See node-install.log for details'\n", 
+                                "\n", 
+                                "## Installing Node Packages\n", 
+                                "cd /mnt/clickstream-demo\n", 
+                                "npm install \"connect@2.20\" >> /home/ec2-user/node-install.log 2>&1 || error_exit 'Failed to install NodeJs.See node-install.log for details'\n", 
+                                "npm install redis >> /home/ec2-user/node-install.log 2>&1 || error_exit 'Failed to install NodeJs.See node-install.log for details'\n", 
+                                "wget http://fastly.github.io/epoch/download/epoch.0.6.0.zip >> /home/ec2-user/epoch-install.log 2>&1 || error_exit 'Failed to install Epoch.See epoch-install.log for details'\n", 
+                                "unzip epoch.0.6.0.zip >> /home/ec2-user/epoch-install.log 2>&1 || error_exit 'Failed to install Epoch.See epoch-install.log for details'\n", 
+                                "\n", 
+                                "## Starting Node app\n", 
+                                "redisNode=$(aws elasticache describe-cache-clusters --show-cache-node-info --query 'CacheClusters[].CacheNodes[].Endpoint.Address' --output text --region ", 
+                                {
+                                    "Ref": "AWS::Region"
+                                }, 
+                                " --cache-cluster-id ", 
+                                {
+                                    "Ref": "RedisCluster"
+                                }, 
+                                ")\n", 
+                                "node node-app.js $redisNode & > /home/ec2-user/node-app.log 2>&1 || error_exit 'Failed to run NodeJs app.See /home/ec2-user/node-app.log for details'\n", 
+                                "\n", 
+                                "## If all went well, signal success\n", 
+                                "/opt/aws/bin/cfn-signal -e $? -r 'Installation Complete' '", 
+                                {
+                                    "Ref": "NodeJsWaitHandle"
+                                }, 
+                                "'\n"
+                            ]
+                        ]
+                    }
+                }
+            }, 
+            "Type": "AWS::EC2::Instance"
+        }, 
+        "NodeJsSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Enable HTTP and SSH access", 
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "65535"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "udp", 
+                        "ToPort": "65535"
+                    }
+                ], 
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Ref": "SSHLocation"
+                        }, 
+                        "FromPort": "22", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "22"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "9000", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "9000"
+                    }
+                ], 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::SecurityGroup"
+        }, 
+        "NodeJsWaitCondition": {
+            "DependsOn": "NodeJsInstance", 
+            "Properties": {
+                "Handle": {
+                    "Ref": "NodeJsWaitHandle"
+                }, 
+                "Timeout": "600"
+            }, 
+            "Type": "AWS::CloudFormation::WaitCondition"
+        }, 
+        "NodeJsWaitHandle": {
+            "Type": "AWS::CloudFormation::WaitConditionHandle"
+        }, 
+        "ProducerInstance": {
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "config": {
+                        "files": {
+                            "/mnt/clickstream-demo/crontask": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "", 
+                                        [
+                                            "* * * * * bash /mnt/clickstream-demo/watchdog.sh\n"
+                                        ]
+                                    ]
+                                }, 
+                                "group": "ec2-user", 
+                                "mode": "000644", 
+                                "owner": "ec2-user"
+                            }, 
+                            "/mnt/clickstream-demo/watchdog.sh": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "", 
+                                        [
+                                            "#!/bin/bash\n", 
+                                            "if ! ps aux | grep HttpReferrerStreamWriter | grep -v grep ; then\n", 
+                                            "    # Launch our Kinesis stream writer to fill our stream with generated HTTP (resource, referrer) pairs.\n", 
+                                            "    # This will create a writer with 5 threads to send records indefinitely.\n", 
+                                            "    java -cp /mnt/clickstream-demo/lib/\\* com.amazonaws.services.kinesis.samples.datavis.HttpReferrerStreamWriter 5 ", 
+                                            {
+                                                "Ref": "KinesisStream"
+                                            }, 
+                                            " ", 
+                                            {
+                                                "Ref": "AWS::Region"
+                                            }, 
+                                            " &>> /home/ec2-user/clickstream-producer.log &\n", 
+                                            "fi\n"
+                                        ]
+                                    ]
+                                }, 
+                                "group": "ec2-user", 
+                                "mode": "000755", 
+                                "owner": "ec2-user"
+                            }
+                        }, 
+                        "packages": {
+                            "yum": {
+                                "java-1.7.0-openjdk": []
+                            }
+                        }, 
+                        "sources": {
+                            "/mnt/clickstream-demo/": "https://github.com/awslabs/amazon-kinesis-data-visualization-sample/releases/download/v1.1.1/amazon-kinesis-data-visualization-sample-1.1.1-assembly.zip"
+                        }
+                    }
+                }
+            }, 
+            "Properties": {
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                }, 
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI", 
+                        {
+                            "Ref": "AWS::Region"
+                        }, 
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch", 
+                                {
+                                    "Ref": "ProducerInstanceType"
+                                }, 
+                                "Arch"
+                            ]
+                        }
+                    ]
+                }, 
+                "InstanceType": {
+                    "Ref": "ProducerInstanceType"
+                }, 
+                "KeyName": {
+                    "Ref": "KeyName"
+                }, 
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true", 
+                        "DeleteOnTermination": "true", 
+                        "DeviceIndex": "0", 
+                        "GroupSet": [
+                            {
+                                "Ref": "ProducerSecurityGroup"
+                            }
+                        ], 
+                        "SubnetId": {
+                            "Ref": "PublicSubnet"
+                        }
+                    }
+                ], 
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "", 
+                            [
+                                "#!/bin/bash\n", 
+                                "yum update -y aws-cfn-bootstrap\n", 
+                                "/opt/aws/bin/cfn-init -s ", 
+                                {
+                                    "Ref": "AWS::StackId"
+                                }, 
+                                " -r ProducerInstance ", 
+                                "--region ", 
+                                {
+                                    "Ref": "AWS::Region"
+                                }, 
+                                "\n", 
+                                "# Register watchdog script with cron\n", 
+                                "crontab /mnt/clickstream-demo/crontask\n", 
+                                "# Launch watchdog script immediately so if it fails this stack fails in turn\n", 
+                                "/mnt/clickstream-demo/watchdog.sh\n", 
+                                "/opt/aws/bin/cfn-signal -e $? '", 
+                                {
+                                    "Ref": "ProducerWaitHandle"
+                                }, 
+                                "'\n"
+                            ]
+                        ]
+                    }
+                }
+            }, 
+            "Type": "AWS::EC2::Instance"
+        }, 
+        "ProducerSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Inbound SSH from the VPC and outbound HTTP/HTTPS for the producer instance.", 
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "65535"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "udp", 
+                        "ToPort": "65535"
+                    }
+                ], 
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {"Ref": "SSHLocation"}, 
+                        "FromPort": "22", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "22"
+                    }
+                ], 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::SecurityGroup"
+        }, 
+        "ProducerWaitCondition": {
+            "DependsOn": "ProducerInstance", 
+            "Properties": {
+                "Handle": {
+                    "Ref": "ProducerWaitHandle"
+                }, 
+                "Timeout": "600"
+            }, 
+            "Type": "AWS::CloudFormation::WaitCondition"
+        }, 
+        "ProducerWaitHandle": {
+            "Type": "AWS::CloudFormation::WaitConditionHandle"
+        }, 
+        "PublicRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0", 
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }, 
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            }, 
+            "Type": "AWS::EC2::Route"
+        }, 
+        "PublicRouteTable": {
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::RouteTable"
+        }, 
+        "PublicSubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        0, 
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                }, 
+                "CidrBlock": "10.0.1.0/24", 
+                "Tags": [
+                    {
+                        "Key": "Network", 
+                        "Value": "Public"
+                    }
+                ], 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::Subnet"
+        }, 
+        "PublicSubnetRouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }, 
+                "SubnetId": {
+                    "Ref": "PublicSubnet"
+                }
+            }, 
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        }, 
+        "RedisCluster": {
+            "Properties": {
+                "CacheNodeType": {
+                    "Ref": "ClusterNodeType"
+                }, 
+                "CacheSubnetGroupName": {
+                    "Ref": "RedisSubnetGroup"
+                }, 
+                "Engine": "redis", 
+                "NumCacheNodes": "1", 
+                "VpcSecurityGroupIds": [
+                    {
+                        "Ref": "RedisSecurityGroup"
+                    }
+                ]
+            }, 
+            "Type": "AWS::ElastiCache::CacheCluster"
+        }, 
+        "RedisSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Redis Security Group", 
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "65535"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "udp", 
+                        "ToPort": "65535"
+                    }
+                ], 
+                "SecurityGroupIngress": [
+                    {
+                        "FromPort": "6379", 
+                        "IpProtocol": "tcp", 
+                        "SourceSecurityGroupId": {
+                            "Ref": "StormSecurityGroup"
+                        }, 
+                        "ToPort": "6379"
+                    }, 
+                    {
+                        "FromPort": "6379", 
+                        "IpProtocol": "tcp", 
+                        "SourceSecurityGroupId": {
+                            "Ref": "NodeJsSecurityGroup"
+                        }, 
+                        "ToPort": "6379"
+                    }
+                ], 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::SecurityGroup"
+        }, 
+        "RedisSubnetGroup": {
+            "Properties": {
+                "Description": "Subnet for the Redis Elasticache instance.", 
+                "SubnetIds": [
+                    {
+                        "Ref": "PublicSubnet"
+                    }
+                ]
+            }, 
+            "Type": "AWS::ElastiCache::SubnetGroup"
+        }, 
+        "StormInstance": {
+            "DependsOn": "RedisCluster", 
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "config": {
+                        "files": {
+                            "/mnt/clickstream-demo/kinesis-storm-clickstream-sample-app.jar": {
+                                "group": "ec2-user", 
+                                "mode": "000755", 
+                                "owner": "ec2-user", 
+                                "source": "https://s3.amazonaws.com/kinesis-storm-clickstream/kinesis-storm-clickstream-sample-app.jar"
+                            }, 
+                            "/mnt/clickstream-demo/sample.properties": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "", 
+                                        [
+                                            "topologyName = SampleTopology\n", 
+                                            "streamName = ", 
+                                            {
+                                                "Ref": "KinesisStream"
+                                            }, 
+                                            "\n", 
+                                            "initialPositionInStream = TRIM_HORIZON\n", 
+                                            "zookeeperEndpoint = localhost:2181\n", 
+                                            "redisEndpoint = redisNode\n", 
+                                            "regionName = ", 
+                                            {
+                                                "Ref": "AWS::Region"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            }, 
+                            "/mnt/clickstream-demo/storm-install.sh": {
+                                "group": "ec2-user", 
+                                "mode": "000755", 
+                                "owner": "ec2-user", 
+                                "source": "https://s3.amazonaws.com/kinesis-storm-clickstream/storm-install.sh"
+                            }
+                        }
+                    }
+                }
+            }, 
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda", 
+                        "Ebs": {
+                            "VolumeSize": "100", 
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ], 
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                }, 
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI", 
+                        {
+                            "Ref": "AWS::Region"
+                        }, 
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch", 
+                                {
+                                    "Ref": "StormInstanceType"
+                                }, 
+                                "Arch"
+                            ]
+                        }
+                    ]
+                }, 
+                "InstanceType": {
+                    "Ref": "StormInstanceType"
+                }, 
+                "KeyName": {
+                    "Ref": "KeyName"
+                }, 
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true", 
+                        "DeleteOnTermination": "true", 
+                        "DeviceIndex": "0", 
+                        "GroupSet": [
+                            {
+                                "Ref": "StormSecurityGroup"
+                            }
+                        ], 
+                        "SubnetId": {
+                            "Ref": "PublicSubnet"
+                        }
+                    }
+                ], 
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "", 
+                            [
+                                "#!/bin/bash\n", 
+                                "\n", 
+                                "function error_exit\n", 
+                                "{\n", 
+                                "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", 
+                                {
+                                    "Ref": "StormWaitHandle"
+                                }, 
+                                "'\n", 
+                                "  exit 1\n", 
+                                "}\n", 
+                                "\n", 
+                                "## Install and Update CloudFormation\n", 
+                                "yum update -y aws-cfn-bootstrap\n", 
+                                "\n", 
+                                "## Run CloudFormation Init\n", 
+                                "/opt/aws/bin/cfn-init -v -s ", 
+                                {
+                                    "Ref": "AWS::StackName"
+                                }, 
+                                " -r StormInstance", 
+                                "   --region ", 
+                                {
+                                    "Ref": "AWS::Region"
+                                }, 
+                                " > /home/ec2-user/cfn-init.log 2>&1 || error_exit 'Failed to run cfn-init.See cfn-init.log for details'\n", 
+                                "\n", 
+                                "## Running storm installation script\n", 
+                                "/mnt/clickstream-demo/storm-install.sh > /home/ec2-user/storm-install.log 2>&1 || error_exit 'Failed to install Strom.See storm-install.log for details'\n", 
+                                "\n", 
+                                "redisNode=$(aws elasticache describe-cache-clusters --show-cache-node-info --query 'CacheClusters[].CacheNodes[].Endpoint.Address' --output text --region ", 
+                                {
+                                    "Ref": "AWS::Region"
+                                }, 
+                                " --cache-cluster-id ", 
+                                {
+                                    "Ref": "RedisCluster"
+                                }, 
+                                ")\n", 
+                                "sed -i s/redisNode/$redisNode/ /mnt/clickstream-demo/sample.properties\n", 
+                                "\n", 
+                                "## Starting storm topology\n", 
+                                "sleep 30\n", 
+                                "/usr/local/storm/bin/storm jar /mnt/clickstream-demo/kinesis-storm-clickstream-sample-app.jar KinesisStormClickstreamApp.SampleTopology /mnt/clickstream-demo/sample.properties RemoteMode > /home/ec2-user/storm-topology.log 2>&1 || error_exit 'Failed to run Topology.See /home/ec2-user/storm-topology.log for details'\n", 
+                                "\n", 
+                                "## If all went well, signal success\n", 
+                                "/opt/aws/bin/cfn-signal -e $? -r 'Installation Complete' '", 
+                                {
+                                    "Ref": "StormWaitHandle"
+                                }, 
+                                "'\n"
+                            ]
+                        ]
+                    }
+                }
+            }, 
+            "Type": "AWS::EC2::Instance"
+        }, 
+        "StormSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Enable HTTP and SSH access", 
+                "SecurityGroupEgress": [
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "65535"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "1", 
+                        "IpProtocol": "udp", 
+                        "ToPort": "65535"
+                    }
+                ], 
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": {
+                            "Ref": "SSHLocation"
+                        }, 
+                        "FromPort": "22", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "22"
+                    }, 
+                    {
+                        "CidrIp": "0.0.0.0/0", 
+                        "FromPort": "8080", 
+                        "IpProtocol": "tcp", 
+                        "ToPort": "8080"
+                    }
+                ], 
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }, 
+            "Type": "AWS::EC2::SecurityGroup"
+        }, 
+        "StormWaitCondition": {
+            "DependsOn": "StormInstance", 
+            "Properties": {
+                "Handle": {
+                    "Ref": "StormWaitHandle"
+                }, 
+                "Timeout": "1200"
+            }, 
+            "Type": "AWS::CloudFormation::WaitCondition"
+        }, 
+        "StormWaitHandle": {
+            "Type": "AWS::CloudFormation::WaitConditionHandle"
+        }, 
+        "VPC": {
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16", 
+                "EnableDnsHostnames": "true", 
+                "EnableDnsSupport": "true"
+            }, 
+            "Type": "AWS::EC2::VPC"
+        }
+    }
+}

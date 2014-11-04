@@ -1,0 +1,88 @@
+/*
+ * Copyright 2013-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Amazon Software License (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ * http://aws.amazon.com/asl/
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+ 
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Real Time Visualization - Clickstream</title>
+  <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="epoch.min.js"></script>
+  <link rel="stylesheet" href="epoch.min.css">
+  <style>
+    html, body
+    {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div style="width: 100%; height: 100%; ">
+	  <div style="width: 100%; height: 20%; ">
+	    <h1>Demo: real-time clickstream visualization</h1>
+	    <text>The clickstream data is being streamed into Amazon Kinesis and Apache storm is used to compute the count by referrers over a sliding window of 2 secs. The couters are made available to the clients using server-side events generated from a Redis PubSub channel. The visualization below was made using Epoch, a library based on D3</text>
+	  </div>
+	  <div id="mainDiv" style="width: 100%; height: 80%;"></div>
+	</div>
+	<script>
+	  var siteArray = [ "amazon", "yahoo", "bing", "reddit", "google", "stackoverflow" ];
+	  var currentTime = ((new Date).getTime() /1000) - 10;
+
+	  var arrayLength = siteArray.length;
+
+	  for (var i = 0; i < arrayLength; i++) {
+	    var containerDiv = document.createElement('div');
+	    containerDiv.style.width='100%';
+	    containerDiv.style.height='16%';
+
+	    var labelDiv = document.createElement('div');
+	    labelDiv.style.width='11%';
+	    labelDiv.style.height='100%';
+	    labelDiv.style.position='relative';
+	    labelDiv.style.float='left';
+	    labelDiv.innerHTML = "<h3>"+siteArray[i]+"</h3>";
+
+	    var chartDiv = document.createElement('div');
+	    chartDiv.id = siteArray[i]+'Chart';
+	    chartDiv.className = "epoch category20";
+	    chartDiv.style.width='89%';
+	    chartDiv.style.height='100%';
+	    chartDiv.style.position='relative';
+	    chartDiv.style.float='left';
+
+	    containerDiv.appendChild(labelDiv);
+	    containerDiv.appendChild(chartDiv);
+	    document.getElementById('mainDiv').appendChild(containerDiv);
+
+	    eval("var "+siteArray[i]+"Data = [{label:\""+siteArray[i]+"\",values:[{time:currentTime,y:0}]}];")
+	    eval("var "+siteArray[i]+" = $('#"+siteArray[i]+"Chart').epoch({type:'time.area',data:"+siteArray[i]+"Data,axes:['left','bottom','right']});")
+	  }
+
+	  function tick(e)
+	  {
+	    if(e)
+	    {
+	      var eventData = JSON.parse(e.data);
+	      window[eventData.name].push([{ time: eventData.time/1000.00, y: eventData.count}]);
+	    }
+	  }
+
+	  var source = new EventSource('/eventCounters');
+	  source.addEventListener('message',tick);
+	</script>
+</body>
+</html>
