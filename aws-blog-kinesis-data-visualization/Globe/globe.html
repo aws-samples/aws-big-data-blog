@@ -1,0 +1,52 @@
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Kinesis Demo</title>
+<style>
+body {
+	margin: 0;
+	overflow: hidden;
+	background-color: #000;
+}
+
+.tm {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+}
+
+.webgl-error {
+	font: 15px/30px monospace;
+	text-align: center;
+	color: #fff;
+	margin: 50px;
+}
+
+.webgl-error a {
+	color: #fff;
+}
+
+.white {
+	color: #ffffff;
+}
+</style>
+</head>
+<body>
+	<div>
+		<a href='heatmap' class='white'>Heatmap</a> <a href='globe' class='white'>Globe</a>
+	</div>
+	<div id="webgl"></div>
+
+	<script src="https://cdn.socket.io/socket.io-1.0.6.js"></script>
+	<script src="js/three.min.js"></script>
+	<script src="js/Detector.js"></script>
+	<script src="js/Quaternion.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/LensFlare.js"></script>
+	<script src="js/PointCloud.js"></script>
+	<script src="js/earth.js"></script>
+
+
+</body>
+</html>
