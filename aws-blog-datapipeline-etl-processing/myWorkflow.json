@@ -1,0 +1,99 @@
+{
+  "objects": [
+    {
+      "id": "myPreconditionId",
+      "name": "DefaultPrecondition1",
+      "maximumRetries": "10",
+      "role": "DataPipelineDefaultRole",
+      "s3Prefix": "#{myInputData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')}",
+      "type": "S3PrefixNotEmpty"
+    },
+    {
+      "id": "myDataNodeId",
+      "precondition": {
+        "ref": "myPreconditionId"
+      },
+      "schedule": {
+        "ref": "mySchedule"
+      },
+      "filePath": "#{myInputData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')}",
+      "name": "EMR Workshop S3",
+      "type": "S3DataNode"
+    },
+    {
+      "id": "myActivityId",
+      "input": {
+        "ref": "myDataNodeId"
+      },
+      "schedule": {
+        "ref": "mySchedule"
+      },
+      "name": "EMR Pig job",
+      "runsOn": {
+        "ref": "myEmrClusterId"
+      },
+      "maximumRetries": "2",
+      "type": "EmrActivity",
+      "preStepCommand": "/home/hadoop/bin/emrfs sync #{myInputData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')}",
+      "step": [
+        "s3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar,s3://us-east-1.elasticmapreduce/libs/pig/pig-script,--base-path,s3://us-east-1.elasticmapreduce/libs/pig/,--pig-versions,latest,--run-pig-script,--args,-f,#{myPigScript},-p,INPUT=#{myInputData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')},-p,OUTPUT=#{myTransformedData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')}"
+      ]
+    },
+    {
+      "terminateAfter": "1 Hour",
+      "id": "myEmrClusterId",
+      "amiVersion": "3.2.1",
+      "schedule": {
+        "ref": "mySchedule"
+      },
+      "keyPair": "#{myKeyPair}",
+      "masterInstanceType": "m3.xlarge",
+      "bootstrapAction": "s3://elasticmapreduce/bootstrap-actions/configure-hadoop,-e,fs.s3.consistent=true,-e, fs.s3.consistent.metadata.tableName=EmrFSMetadata, -e, fs.s3.consistent.retryCount=5, -e, fs.s3.consistent.retryPeriodSeconds=10, -e, fs.s3.enableServerSideEncryption=true",
+      "coreInstanceType": "m3.xlarge",
+      "enableDebugging": "true",
+      "name": "DefaultEmrCluster1",
+      "coreInstanceCount": "2",
+      "type": "EmrCluster"
+    },
+    {
+      "id": "ActivityId",
+      "schedule": {
+        "ref": "mySchedule"
+      },
+      "name": "EMR Hive job",
+      "runsOn": {
+        "ref": "myEmrClusterId"
+      },
+      "maximumRetries": "2",
+      "postStepCommand": "/home/hadoop/bin/emrfs delete --time 2 -u days",
+      "dependsOn": {
+        "ref": "myActivityId"
+      },
+      "type": "EmrActivity",
+      "step": "s3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar,s3://us-east-1.elasticmapreduce/libs/hive/hive-script,--base-path,s3://us-east-1.elasticmapreduce/libs/hive/,--hive-versions,latest,--run-hive-script,--args,-f,#{myHiveScript},-d,INPUT=#{myTransformedData}/#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')},-d,OUTPUT=#{myOutputData},-d,DATE=#{format(minusDays(@scheduledStartTime,1),'YYYY-MM-dd')}"
+    },
+    {
+      "id": "Default",
+      "scheduleType": "CRON",
+      "failureAndRerunMode": "CASCADE",
+      "name": "Default",
+      "pipelineLogUri": "s3://<<MY_BUCKET>>/edp_logs",
+      "role": "DataPipelineDefaultRole",
+      "resourceRole": "DataPipelineDefaultResourceRole",
+      "myInputData": "s3://emr-workshop/data/input",
+      "myTransformedData": "s3://<<MY_BUCKET>>/data/output",
+      "myOutputData": "s3://<<MY_BUCKET>>/data/reports",
+      "myPigScript": "s3://emr-workshop/scripts/pig_sample.pig",
+      "myHiveScript": "s3://emr-workshop/scripts/hive_sample.q",
+      "myKeyPair": "<<MY_KEYPAIR>>"
+    },
+    {
+      "id": "mySchedule",
+      "startDateTime": "2014-09-22T00:00:00",
+      "name": "MyEMRJobSchedule",
+      "type": "Schedule",
+      "period": "1 Day",
+      "endDateTime": "2014-09-23T00:00:00"
+    }
+  ]
+}
