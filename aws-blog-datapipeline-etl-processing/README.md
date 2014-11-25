@@ -1,6 +1,6 @@
 # ETL Processing using AWS DataPipeline and Amazon EMR
 
-This is the code repository for code sample used in AWS Big data blog "ETL Processing using AWS Datapipeline and Amazon EMR"
+This is the code repository for code sample used in AWS Big data blog [ETL Processing using AWS Datapipeline and Amazon EMR]
 
 ## Prerequisites 
   - Amazon Web Services account
@@ -42,3 +42,4 @@ $ aws datapipeline activate-pipeline --pipeline-id df-XXXXXXXXXXX
 ```
 
 [AWS Command Line Interface (CLI)]:http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html
+[ETL Processing using AWS Datapipeline and Amazon EMR]:http://blogs.aws.amazon.com/bigdata/post/Tx1PU7JM7I34L81/ETL­-Processing-Using-AWS-Data-Pipeline-and-Amazon-Elastic-MapReduce
