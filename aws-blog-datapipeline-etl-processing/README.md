@@ -38,7 +38,7 @@ $ aws datapipeline put-pipeline-definition --pipeline-id df-XXXXXXXXXXX --pipeli
 
 You need to activate the pipeline before it can run on the schedule defined.
 ```
-$ aws datapipeline activate-pipeline --pipeline-id df- XXXXXXXXXXX
+$ aws datapipeline activate-pipeline --pipeline-id df-XXXXXXXXXXX
 ```
 
 [AWS Command Line Interface (CLI)]:http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html
