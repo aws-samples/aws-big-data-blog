@@ -30,9 +30,9 @@ Once your HBase cluster on Amazon EMR is available you will need to perform the 
 **Running the Sample Application**
 
  - Edit EMRHBase.properties as described in the Application Configuration section.
-Note: HBaseExecutor found within the com.amazonaws.hbase.connector package uses the DefaultAWSCredentialsProviderChain, which looks for credentials supplied by environment variables, system properties, or IAM role on Amazon EC2.
+   **Note:** [HBaseExecutor](https://github.com/wmdoble/aws-big-data-blog/blob/97ece6d230a9931a7d48015adf19f3873934cee3/aws-blog-hbase-on-emr/hbase-connector/src/main/java/com/amazonaws/hbase/connector/HBaseExecutor.java) uses the [DefaultAWSCredentialsProviderChain](http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html), which looks for credentials supplied by environment variables, system properties, or IAM role on Amazon EC2.
  - Confirm the required AWS resources exist or specify that they should be created when the sample is run.
- - Execute HBaseExecutor within the com.amazonaws.hbase.connector package.
+ - Execute [HBaseExecutor](https://github.com/wmdoble/aws-big-data-blog/blob/master/aws-blog-hbase-on-emr/hbase-connector/src/main/java/com/amazonaws/hbase/connector/HBaseExecutor.java).
  - Query your HBase table from the HBase shell to verify that indeed data loading is occurring via this Amazon Kinesis-HBase connector.
 
 ----------
