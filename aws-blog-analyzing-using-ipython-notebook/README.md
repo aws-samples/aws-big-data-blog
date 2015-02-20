@@ -9,6 +9,16 @@ This is bootstrap action to install [IPython Notebook] on [Amazon EMR]. Here we 
 #### Overview of Bootstrap
 Bootstrap install IPython notebook, [requests], [numpy] and [matplotlib] packages. The notebook server is running on Amazon EMR master node on port 8192.
 
+
+#### Launching cluster
+```
+aws emr create-cluster --name iPythonNotebookEMR \
+--ami-version 3.2.3 --instance-type m3.xlarge --instance-count 3 \
+--ec2-attributes KeyName=<<MYKEY>> \
+--bootstrap-actions Path=s3://elasticmapreduce.bootstrapactions/ipython-notebook/install-ipython-notebook,Name=Install_iPython_NB \
+--termination-protected
+```
+
 ### Connecting to Notebook
 To access the IPython notebook interface, replace master-public-dns-name in the URI with the DNS name of the master node after creating an SSH tunnel. For more information about retrieving the master public DNS name, see [Retrieve the Public DNS Name of the Master Node]. For more information about creating an SSH tunnel, see [Set Up an SSH Tunnel to the Master Node Using Dynamic Port Forwarding.]
 
