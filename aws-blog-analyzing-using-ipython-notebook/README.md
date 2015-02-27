@@ -69,9 +69,9 @@ yValue = []
 
 # scan the rows of the file stored in lines, and put the values into some variables:
 for i in output.splitlines():
-line=i.split("\t")
-xValue.append(line[0])
-yValue.append(int(line[1]))
+	line=i.split("\t")
+	xValue.append(line[0])
+	yValue.append(int(line[1]))
 
 # Plotting the data
 topN = list(range(1,TOP_X_WORDS+1))
