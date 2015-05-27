@@ -3,9 +3,9 @@ Install:
 
 1) sudo yum install git
 
-2) git clone https://github.com/hvivani/bigdata.git
+2) git clone https://github.com/awslabs/aws-big-data-blog.git
 
-3) cd bigdata/cascading/commoncrawl.cascading.elasticsearch/
+3) cd aws-big-data-blog/aws-blog-elasticsearch-cascading-commoncrawl/commoncrawl.cascading.elasticsearch/
 
 To compile in Local Mode:
 =========================
@@ -32,7 +32,7 @@ platform=DISTRIBUTED
 Compile with:
 -------------
 
-mvn clean && mvn assembly:assembly -Ddescriptor=./src/main/assembly/job.xml -e
+mvn clean && mvn assembly:assembly -Dmaven.test.skip=true  -Ddescriptor=./src/main/assembly/job.xml -e
 
 Execute:
 --------
