@@ -25,11 +25,12 @@ aws emr create-cluster \
   --name "exampleJob" \
   --ec2-attributes KeyName=hadoop \
   --auto-terminate \
-  --ami-version 3.6.0 \
+  --ami-version 3.8.0 \
   --instance-groups \
     InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.xlarge \
     InstanceGroupType=CORE,InstanceCount=1,InstanceType=r3.2xlarge \
- --log-uri s3://your-bucket-name/$USER/spark/`date +%Y%m%d%H%M%S`/logs \
+  --log-uri s3://your-bucket-name/$USER/spark/`date +%Y%m%d%H%M%S`/logs \
+  --applications Name=Spark,Args=[-x] \
  --bootstrap-actions Path=s3://support.elasticmapreduce/spark/install-spark \
- --steps "Name=\"Run Spark\",Jar=s3n://elasticmapreduce/libs/script-runner/script-runner.jar,Args=[/home/hadoop/spark/bin/spark-submit,--deploy-mode,cluster,--master,yarn-cluster,--conf,spark.executor.extraJavaOptions=-XX:MaxPermSize=256m,--conf,spark.driver.extraJavaOptions=-XX:MaxPermSize=512m,--class,ModelingWorkflow,s3://your-bucket-name/$USER/spark/jars/spark-emr-assembly-1.0.jar,s3://intentmedia-spark/test-resources/,s3://your-bucket-name/$USER/spark/output/]"
+ --steps "Name=\"Run Spark\",Type=Spark,Args=[--deploy-mode,cluster,--master,yarn-cluster,--conf,spark.executor.extraJavaOptions=-XX:MaxPermSize=256m,--conf,spark.driver.extraJavaOptions=-XX:MaxPermSize=512m,--class,ModelingWorkflow,--num-executors,14,--executor-memory,29g,--executor-cores,5,s3://your-bucket-name/$USER/spark/jars/spark-emr-assembly-1.0.jar,s3://support.elasticmapreduce/bigdatademo/intentmedia/,s3://your-bucket-name/$USER/spark/output/]"
 ```
