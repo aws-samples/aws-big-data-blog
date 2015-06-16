@@ -4,7 +4,7 @@ Spark on Amazon EMR.  It demonstrates an example machine learning workflow using
 
 ## Prerequisites
   - Amazon Web Services account
-  - [AWS Command Line Interface (CLI)]
+  - [AWS Command Line Interface (CLI)](http://aws.amazon.com/cli/)
   - [sbt](http://www.scala-sbt.org/)
   - [sbt-assembly](https://github.com/sbt/sbt-assembly)
   
