@@ -18,3 +18,4 @@ npm install
 ## Running
 1. Run the app with: ```node app.js```
 1. Browse to port 4001 on that machine. This should start the demo. The demo will initiate cascading Lambdas to search the public AWS bucket awssampledb and count the words. The results will stream to the browser.
+1. If you want to run the demo on your own bucket or another public bucket, launch node with an environment variable like this: ```BUCKET=mybucket node app.js```.
