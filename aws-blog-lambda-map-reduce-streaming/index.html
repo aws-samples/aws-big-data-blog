@@ -1,0 +1,91 @@
+<html>
+<head>
+<style>
+* {
+  font-family: sans-serif;
+}
+.bignum {
+  font-size: 60px;
+  padding: 50px;
+  background-color: white;
+  color: white;
+  text-align: center;
+}
+.stats {
+  font-size: 30px;
+}
+</style>
+</head>
+<body>
+<div id="status">In progress...</div>
+<table style="table-layout: fixed;">
+<tbody>
+  <tr>
+    <td id="keys" class="bignum">0</td>
+    <td id="words" class="bignum">0</td>
+  </tr>
+  <tr>
+    <td id="lines" class="bignum">0</td>
+    <td id="cost" class="bignum">$0.0</td>
+  </tr>
+</tbody>
+</table>
+<div id="logs"></div>
+<script>
+function numberFormatter(number){
+  if (number > 1000000000){
+    return Math.round(number / 1000000000 * 100)/100 + 'b';
+  }
+  if (number > 1000000){
+    return Math.round(number / 1000000 * 100)/100 + 'm';
+  }
+  if (number > 1000){
+    return Math.round(number / 1000 * 100)/100 + 'k';
+  }
+  return number;
+}
+var source = new EventSource('stream?prefix=');
+source.addEventListener('message', function(e) {
+  console.log(e.data);
+  var result = JSON.parse(e.data);
+  if (result.complete){
+    console.log('All done!');
+    document.getElementById('status').innerHTML = 'Complete.';
+    source.close();
+    return;
+  }
+  else if (result.logdata){
+    var div = document.createElement('div');
+    div.innerHTML = result.logdata;
+    var logsDiv = document.getElementById('logs');
+    logsDiv.appendChild(div);
+    // Only keep the latest logs
+    while (logsDiv.children.length > 20)
+      logsDiv.children[0].remove();
+    return;
+  }
+  var rgb = 255 - Math.round((255 * (result[0]/result[1])));
+  rgb = 'rgb(' + rgb + ',' + rgb + ',' + rgb + ')';
+  document.getElementById('status').innerHTML = 'In progress...';
+  document.getElementById('keys').innerHTML = 
+    numberFormatter(result[0]) + '/' + numberFormatter(result[1])
+    + '<br><span class="stats">Keys</span>';
+  document.getElementById('words').innerHTML = numberFormatter(result[2])
+    + '<br><span class="stats">Words</span>';
+  document.getElementById('lines').innerHTML = numberFormatter(result[3])
+    + '<br><span class="stats">Lines</span>';
+  document.getElementById('cost').innerHTML = 
+    '$' + (Math.round(.000017 * result[4] / 1000 * 10000)/10000)
+    + '<br><span class="stats">Cost</span>';
+  ['keys', 'words', 'lines', 'cost'].forEach(function(id){
+    document.getElementById(id).style.backgroundColor = rgb;
+  });
+  
+}, false);
+source.addEventListener('error', function(e){
+  console.log('eventstream error', e);
+  source.close();
+});
+</script>
+</body>
+</html>
