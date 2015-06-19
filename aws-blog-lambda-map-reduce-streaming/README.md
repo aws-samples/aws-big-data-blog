@@ -16,8 +16,5 @@ This code is used in the examples on the AWS Big Data Blog article "Building Sca
 npm install
 ```
 ## Running
-1. Run the app with:
-```
-node app.js
-```
+1. Run the app with: ```node app.js```
 1. Browse to port 4001 on that machine. This should start the demo. The demo will initiate cascading Lambdas to search the public AWS bucket awssampledb and count the words. The results will stream to the browser.
