@@ -84,6 +84,13 @@ function LambdaStream(opt){
   }
   opt.objectMode = true;
   Transform.call(this, opt);
+  if (opt.no_agg){
+    this._noAgg = true;
+  }
+  else {
+    this._noAgg = false;
+  }
+
   this._bucket = opt.bucket;
   if (!this._bucket) throw Error('No bucket provided.');
   var agent = new https.Agent();
@@ -172,7 +179,8 @@ LambdaStream.prototype._invoke = function(cb){
       bucket: self._bucket,
       region: self._region,
       burst_rate: Math.floor((PROVISIONED_CONCURRENT_LAMBDAS - DEFAULT_MAX_CONCURRENT_LAMBDAS) / DEFAULT_MAX_CONCURRENT_LAMBDAS),
-      batch_size: PROCESS_BATCH_SIZE
+      batch_size: PROCESS_BATCH_SIZE,
+      no_agg: self._noAgg
     })
   };
   
@@ -212,17 +220,43 @@ LambdaStream.prototype._invoke = function(cb){
     
     self._totalKeys += batch.length;
     var result = JSON.parse(obj.Payload);
-    if (parseInt(result[0]) >= 0){
-      self._totalWords += parseInt(result[0]);
-      self._totalLines += parseInt(result[1]);
-      self._total_ms_taken += parseInt(result[2]);
-      self.push(JSON.stringify(
-        [self._totalKeys, self._keyCounter, 
-          self._totalWords, self._totalLines, self._total_ms_taken]
-      ));
-      for (var i = 0, len = result[3].length; i < len; i++){
-        self.logToClient('WARNING: ' + result[3][i]);
+    if (result.length && (result[0].length > 0 || result[0] > 0)){
+      if (self._noAgg){
+        // For each Cascade
+        for (var i = 0, len = result.length; i < len; i++){
+          // For each Wordcount
+          for (var j = 0, jlen = result[i][0].length; j < jlen; j++){
+            var perLambdaResult = result[i][0][j];
+            self.push(JSON.stringify(
+              [ 
+                self._totalKeys, 
+                self._keyCounter, 
+                perLambdaResult[0], 
+                perLambdaResult[1],
+                perLambdaResult[2]
+              ]
+            ));
+          }
+          for (var j = 0, jlen = result[i][1].length; j < jlen; j++){
+            self.logToClient('WARNING: ' + result[i][1][j]);
+          }
+        }
       }
+      else {
+        self._totalWords += parseInt(result[0]);
+        self._totalLines += parseInt(result[1]);
+        self._total_ms_taken += parseInt(result[2]);
+        self.push(JSON.stringify(
+          [self._totalKeys, self._keyCounter, 
+            self._totalWords, self._totalLines, self._total_ms_taken]
+        ));
+        for (var i = 0, len = result[3].length; i < len; i++){
+          self.logToClient('WARNING: ' + result[3][i]);
+        }
+      }
+    }
+    else if (result.length && result[0].errorMessage){
+      self.logToClient('WARNING: ' + result[0].errorMessage);
     }
     self._checkDone();
   });

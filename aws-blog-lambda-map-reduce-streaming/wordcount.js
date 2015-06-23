@@ -13,6 +13,10 @@ exports.handler = function(event, context) {
   var id = context.invokeid;
   var srcBucket = event.bucket;
   var srcKeys = event.keys;
+  var doAgg = true;
+  if (event.no_agg)
+    doAgg = false;
+
   if (!srcBucket || !srcKeys){
     context.error('Invalid args.');
   }
@@ -52,7 +56,7 @@ exports.handler = function(event, context) {
         }
         console.log('Finished ' + srcKey + ' with ' +
           totalWords + ' in ' + lineCount + ' lines');
-        cb(null, [totalWords, lineCount, warning]);
+        cb(null, [srcKey, totalWords, lineCount, warning]);
         finished = true;
       });
 
@@ -87,17 +91,32 @@ exports.handler = function(event, context) {
       console.error(err);
       context.fail(err);
     }
-    var totalWords = 0;
-    var totalLines = 0;
+    
     var warnings = [];
-    for (var i = 0, len = results.length; i < len; i++){
-      totalWords += results[i][0];
-      totalLines += results[i][1];
-      if (results[i][2] !== ''){
-        warnings.push(results[i][2]);
+    
+    if (doAgg){
+      var totalWords = 0;
+      var totalLines = 0;
+      for (var i = 0, len = results.length; i < len; i++){
+        totalWords += results[i][1];
+        totalLines += results[i][2];
+        if (results[i][3] !== ''){
+          warnings.push(results[i][3]);
+        }
       }
+      console.log('Final total words: ' + totalWords);
+      context.succeed([totalWords, totalLines, warnings]);
     }
-    console.log('Final total words: ' + totalWords);
-    context.succeed(JSON.stringify([totalWords, totalLines, warnings]));
+    else {
+      var entries = [];
+      for (var i = 0, len = results.length; i < len; i++){
+        entries.push([results[i][0], results[i][1], results[i][2]]);
+        if (results[i][3] !== ''){
+          warnings.push(results[i][3]);
+        }
+      }
+      console.log('Processed ' + results.length + ' keys.');
+      context.succeed([entries, warnings]);
+    }
   });
 };

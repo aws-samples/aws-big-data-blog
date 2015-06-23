@@ -22,6 +22,11 @@ app.get('/', function(req, res){
   fs.createReadStream('index.html').pipe(res);
 });
 
+app.get('/scatter', function(req, res){
+  res.set('Content-Type', 'text/html');
+  fs.createReadStream('scatter.html').pipe(res);
+});
+
 app.get('/stream', function(req, res){
   req.socket.setTimeout(Infinity);
 
@@ -33,7 +38,10 @@ app.get('/stream', function(req, res){
   });
   res.write('\n');
 
-  var lambdaStream = new LambdaStream({bucket: BUCKET})
+  var lambdaStream = new LambdaStream({
+    bucket: BUCKET,
+    no_agg: req.query.no_agg
+  })
     .on('error', printError);
   var listStream = new ListStream({bucket: BUCKET, prefix: req.query.prefix})
     .on('error', printError)
