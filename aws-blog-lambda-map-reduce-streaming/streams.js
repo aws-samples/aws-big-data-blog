@@ -24,7 +24,10 @@ function ListStream(opt) {
   Transform.call(this, opt);
   this._nextMarker = null;
   this._lastKey = null;
-  this.s3 = new AWS.S3();
+  if (!opt.region)
+    opt.region = DEFAULT_REGION;
+  this._region = opt.region;
+  this.s3 = new AWS.S3({region: this._region});
 }
 
 ListStream.prototype._transform = function(obj, encoding, cb){

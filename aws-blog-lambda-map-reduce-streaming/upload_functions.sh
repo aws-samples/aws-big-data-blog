@@ -1,20 +1,28 @@
-#!/bin/sh
+#!/bin/bash
+if [ ""$1 = "" ]
+then
+   echo "Did not receive first parameter: role"
+   exit
+elif [ ""$2 = "" ]
+then
+   echo "Did not receive second parameter: region"
+   exit
+fi
 zip Libs.zip cascade.js wordcount.js &&
-aws lambda upload-function \
-   --region us-east-1 \
+aws lambda create-function \
+   --region $2 \
    --function-name blog_cascade \
-   --function-zip Libs.zip \
+   --zip-file fileb://Libs.zip \
    --role $1 \
-   --mode event \
    --handler cascade.handler \
    --runtime nodejs \
    --timeout 60 \
    --debug \
    --memory-size 1024 &&
-aws lambda upload-function \
-   --region us-east-1 \
+aws lambda create-function \
+   --region $2 \
    --function-name wordcount \
-   --function-zip Libs.zip \
+   --zip-file fileb://Libs.zip \
    --role $1 \
    --mode event \
    --handler wordcount.handler \

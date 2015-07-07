@@ -11,6 +11,15 @@ var LISTEN_PORT = 4001;
 if (process.env.LISTEN_PORT)
   LISTEN_PORT = process.env.LISTEN_PORT;
 
+var REGION = 'us-east-1';
+
+if (typeof(process.env.region) !== 'undefined'){
+  REGION = process.env.region;
+}
+else {
+  console.log('Defaulting region to us-east-1, specify with the environment variable REGION to change.');
+}
+
 var app = express();
 
 function printError(err){
@@ -39,11 +48,15 @@ app.get('/stream', function(req, res){
   res.write('\n');
 
   var lambdaStream = new LambdaStream({
+    region: REGION,
     bucket: BUCKET,
     no_agg: req.query.no_agg
   })
     .on('error', printError);
-  var listStream = new ListStream({bucket: BUCKET, prefix: req.query.prefix})
+  var listStream = new ListStream({
+    region: REGION, 
+    bucket: BUCKET, 
+    prefix: req.query.prefix})
     .on('error', printError)
     .on('finish', function(){
       // Manually trigger the end() call to let internal async complete.
