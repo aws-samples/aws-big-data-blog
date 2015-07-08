@@ -1,0 +1,37 @@
+{
+  "name": "lambda_wordcount_demo",
+  "description": "Lambda wordcount demo app",
+  "version": "0.0.1",
+  "homepage": "https://github.com/awslabs/aws-big-data-blog/aws-blog-lambda-map-reduce-streaming/",
+  "keywords": [
+    "Lambda",
+    "map-reduce",
+    "streaming"
+  ],
+  "author": {
+    "name": "Martin Holste"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:awslabs/aws-big-data-blog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/awslabs/aws-big-data-blog/issues",
+    "email": "martin.holste@fireeye.com"
+  },
+  "engines": {
+    "node": ">0.10.*"
+  },
+  "scripts": {
+  },
+  "dependencies": {
+    "async": "^0.9.0",
+    "aws-sdk": "^2.0.25",
+    "event-stream": "^3.1.7",
+    "xml2js": "^0.4.9",
+    "uuid": "^2.0.1"
+  },
+  "devDependencies": {
+  },
+  "readme": "README.md"
+}
