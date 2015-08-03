@@ -2,7 +2,7 @@ var AWS = require('aws-sdk');
 var s3 = new AWS.S3(2006-03-01);
 var dynamodb = new AWS.DynamoDB('2012-08-10');
 
-var keyRegex = /([^/]+)\/[^/]+\/([^-]+)-([^.]+).data/;
+var keyRegex = /[^/]+\/([^/]+)\/[^/]+\/([^-]+)-([^.]+).data/;
  
 exports.handler = function(event, context) {
 	var record = event.Records[0];
@@ -26,12 +26,16 @@ exports.handler = function(event, context) {
 			context.done("Key did not match pattern");
 			return;
 		}
+		
+		var serverId = match[1];
+		var custId = match[2];
+		var ts = match[3];
 	
 		indexItem['Key'] = {S: key};
-		indexItem['Size'] = {N: object.size};
-		indexItem['ServerID'] = {S: match[1]};
-		indexItem['CustID'] = {S: match[2]};
-		indexItem['TS-ServerID'] = {S: new Date(parseInt(match[3])).toISOString() + match[1]};
+		indexItem['Size'] = {N: object.size.toString()};
+		indexItem['ServerID'] = {S: serverId};
+		indexItem['CustID'] = {S: custId};
+		indexItem['TS-ServerID'] = {S: new Date(parseInt(ts)).toISOString() + serverId};
 	
 		var s3HeadParams = {
 			Bucket: bucket,
@@ -44,7 +48,7 @@ exports.handler = function(event, context) {
 				return;
 			} else {
 				if(data.Metadata.hastransaction === 'true') {
-					indexItem.HasTrans = {BOOL: true};
+					indexItem.HasTransaction = {S: 'true'};
 				}
 				putItem();
 			}
@@ -54,12 +58,12 @@ exports.handler = function(event, context) {
 			var table = bucket + '-index';
 			var putParams = {
 				TableName: table,
-				Item: item
+				Item: indexItem
 			};
 		
 			dynamodb.putItem(putParams, function(err, data){
 				if(err) {
-					context.done("Error adding index item to " + table);
+					context.done("Error adding index item to " + table + "\n" + err);
 				} else {
 					context.done();
 				}
