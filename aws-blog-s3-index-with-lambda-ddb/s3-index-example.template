@@ -44,9 +44,17 @@
                         "AttributeType": "S"
                     },
                     {
+                        "AttributeName": "ServerID",
+                        "AttributeType": "S"
+                    },
+                    {
                         "AttributeName": "TS-ServerID",
                         "AttributeType": "S"
-                    }
+                    },
+					{
+						"AttributeName": "HasTransaction",
+						"AttributeType": "S"
+					}
                 ],
                 "KeySchema": [
                     {
@@ -97,12 +105,16 @@
                                 "Key"
                             ],
                             "ProjectionType": "INCLUDE"
-                        }
+                        },                        
+						"ProvisionedThroughput": {
+							"ReadCapacityUnits": "1",
+							"WriteCapacityUnits": "10"
+						}
                     }
                 ],
                 "ProvisionedThroughput": {
                     "ReadCapacityUnits": "1",
-                    "WriteCapacityUnits": "20"
+                    "WriteCapacityUnits": "10"
                 }
             }
         },
@@ -230,7 +242,7 @@
                     }
                 },
                 "Description": "Function for indexing S3 buckets",
-                "Handler": "com.amazonaws.bigdatablog.s3index.Indexer",
+                "Handler": "index.handler",
                 "MemorySize": 128,
                 "Role": {
                     "Fn::GetAtt": [
@@ -238,8 +250,7 @@
                         "Arn"
                     ]
                 },
-                "Runtime": "java8",
-                "Timeout": 15
+                "Runtime": "nodejs"
             }
         }
     },
