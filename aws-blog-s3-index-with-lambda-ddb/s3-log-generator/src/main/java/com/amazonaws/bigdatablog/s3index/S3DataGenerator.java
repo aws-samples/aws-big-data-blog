@@ -1,7 +1,7 @@
-package com.amazonaws.bigdatablog.s3index.datagen;
+package com.amazonaws.bigdatablog.s3index;
 
-import static com.amazonaws.bigdatablog.s3index.datagen.Util.SYSIN;
-import static com.amazonaws.bigdatablog.s3index.datagen.Util.prompt;
+import static com.amazonaws.bigdatablog.s3index.Util.SYSIN;
+import static com.amazonaws.bigdatablog.s3index.Util.prompt;
 import static java.lang.Integer.parseInt;
 import static java.lang.Integer.toHexString;
 import static java.lang.System.currentTimeMillis;
@@ -132,7 +132,7 @@ public class S3DataGenerator {
    private void generateDataFile(String serverId, int customerId, long ts) {
       final byte[] content = generateContent();
       final String key = calcKey(serverId, customerId, ts);
-      final boolean hasTransaction = RANDOM.nextDouble() < 0.01;
+      final boolean hasTransaction = RANDOM.nextDouble() < 0.1;
       final Map<String, String> userMetadata = singletonMap("hastransaction", Boolean.toString(hasTransaction));
       putObject(key, content, userMetadata);
       complete();

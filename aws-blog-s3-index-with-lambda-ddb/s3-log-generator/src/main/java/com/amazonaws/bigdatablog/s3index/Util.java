@@ -1,4 +1,4 @@
-package com.amazonaws.bigdatablog.s3index.datagen;
+package com.amazonaws.bigdatablog.s3index;
 
 import java.io.BufferedReader;
 import java.io.IOException;

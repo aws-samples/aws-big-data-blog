@@ -1,6 +1,6 @@
-package com.amazonaws.bigdatablog.s3index.datagen;
+package com.amazonaws.bigdatablog.s3index;
 
-import static com.amazonaws.bigdatablog.s3index.datagen.Util.prompt;
+import static com.amazonaws.bigdatablog.s3index.Util.prompt;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -29,7 +30,7 @@ public class TruncateBucket {
       this.bucketName = bucketName;
    }
 
-   public static void main(String[] args) throws IOException {
+   public static void main(String[] args) throws IOException, InterruptedException {
       System.out.println("WARNING: This will indiscriminately delete every object in a given bucket. This operation cannot be undone.");
       final String bucketName = prompt("Bucket");
       if (!"yes".equals(prompt("Are you sure you want to delete all objects in bucket " + bucketName + "? (type 'yes' to continue)"))) {
@@ -51,11 +52,16 @@ public class TruncateBucket {
 
    }
 
-   private void truncate() {
+   private void truncate() throws InterruptedException {
       new Thread(this::listKeys).start();
       final Collection<String> keyBuffer = new ArrayList<>(1000);
       while(true) {
-         keys.drainTo(keyBuffer, 1000);
+         final String key = keys.poll(1, TimeUnit.SECONDS);
+         if (key == null) {
+            continue;
+         }
+         keys.add(key);
+         keys.drainTo(keyBuffer, 999);
          if (keys.isEmpty() && complete) {
             return;
          } else {

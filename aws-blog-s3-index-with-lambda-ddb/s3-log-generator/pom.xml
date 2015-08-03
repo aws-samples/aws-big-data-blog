@@ -6,7 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 
 	<properties>
-		<aws.version>1.9.33</aws.version>
+		<aws.version>1.10.8</aws.version>
 	</properties>
 
 	<build>
@@ -56,6 +56,11 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>${aws.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-dynamodb</artifactId>
 			<version>${aws.version}</version>
 		</dependency>
 		<dependency>
