@@ -45,6 +45,7 @@ Note: For your table name you must use the "-index" suffix with the name of your
 |                      |    Key             |
 
 #### Add a global secondary index with the following properties
+
 | Property |  Value          |
 |----------|-----------------|
 | **Index Hash Key Type** | String |
@@ -134,6 +135,7 @@ Create a new function with the following properties:
 | **Timeout** | 3 seconds |
 
 After creating the function add an event source under the Event sources tab with the following properties.
+
 | Property |  Value          |
 |----------|-----------------|
 | **Event source type** | S3 |
