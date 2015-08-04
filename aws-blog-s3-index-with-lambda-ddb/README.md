@@ -26,6 +26,8 @@ These instructions are intended to guide you through the creation of a DynamoDB 
 
 #### Create a DynamoDB table with the following properties
 
+| Property |  Value          |
+|----------|-----------------|
 | **Primary Key Type** | Hash and Range |
 | **Primary Key Hash Attribute**  | CustID |
 | **Primary Key Range Attribute** | TS-ServerID |
@@ -34,6 +36,8 @@ Note: For your table name you must use the "-index" suffix with the name of your
 
 #### Add a local secondary index with the following properties
 
+| Property |  Value          |
+|----------|-----------------|
 | **Index Range Key Type** | String |
 | **Index Range Key** | HasTransaction |
 | **Index Name** | CustomerTransactions |
@@ -41,7 +45,8 @@ Note: For your table name you must use the "-index" suffix with the name of your
 |                      |    Key             |
 
 #### Add a global secondary index with the following properties
-
+| Property |  Value          |
+|----------|-----------------|
 | **Index Hash Key Type** | String |
 | **Index Hash Key**      | ServerID |
 | **Index Range Key Type** | String |
@@ -129,7 +134,8 @@ Create a new function with the following properties:
 | **Timeout** | 3 seconds |
 
 After creating the function add an event source under the Event sources tab with the following properties.
-
+| Property |  Value          |
+|----------|-----------------|
 | **Event source type** | S3 |
 | **Bucket** | The bucket you wish to index |
 | **Event type** | Object created |
