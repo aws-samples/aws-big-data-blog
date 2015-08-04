@@ -117,6 +117,7 @@ The final step of the deployment is to create the Lambda function that will hand
 
 Create a new function with the following properties:
 
+| Property |  Value          |
 |----------|-----------------|
 | **Name** | S3IndexFunction |
 | **Runtime** | Node.js |
