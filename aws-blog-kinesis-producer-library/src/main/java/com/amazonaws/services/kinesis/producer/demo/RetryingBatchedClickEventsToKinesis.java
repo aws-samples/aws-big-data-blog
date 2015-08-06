@@ -17,19 +17,21 @@ import com.amazonaws.services.kinesis.model.PutRecordsResult;
 import com.amazonaws.services.kinesis.model.PutRecordsResultEntry;
 import com.google.common.collect.ImmutableSet;
 
-public class RetryingBatchedClickEventsToKinesis extends BatchedClickEventsToKinesis {
+public class RetryingBatchedClickEventsToKinesis
+        extends BatchedClickEventsToKinesis {
     private final int MAX_BACKOFF = 30000;
     private final int MAX_ATTEMPTS = 5;
     private final Set<String> RETRYABLE_ERR_CODES = ImmutableSet.of(
         "ProvisionedThroughputExceededException",
         "InternalFailure",
         "ServiceUnavailable");
-    
+
     private int backoff;
     private int attempt;
     private Map<PutRecordsRequestEntry, Integer> recordAttempts;
-    
-    public RetryingBatchedClickEventsToKinesis(BlockingQueue<ClickEvent> inputQueue) {
+
+    public RetryingBatchedClickEventsToKinesis(
+            BlockingQueue<ClickEvent> inputQueue) {
         super(inputQueue);
         reset();
         recordAttempts = new HashMap<>();
@@ -40,7 +42,7 @@ public class RetryingBatchedClickEventsToKinesis extends BatchedClickEventsToKin
         PutRecordsRequest req = new PutRecordsRequest()
                 .withStreamName(STREAM_NAME)
                 .withRecords(entries);
-        
+
         PutRecordsResult res = null;
         try {
             res = kinesis.putRecords(req);
@@ -59,13 +61,14 @@ public class RetryingBatchedClickEventsToKinesis extends BatchedClickEventsToKin
                 ie.printStackTrace();
             }
             Math.min(MAX_BACKOFF, backoff *= 2);
-            
+
             attempt++;
             flush();
         }
-        
+
         final List<PutRecordsResultEntry> results = res.getRecords();
-        List<PutRecordsRequestEntry> retries = IntStream.range(0, results.size())
+        List<PutRecordsRequestEntry> retries = IntStream
+            .range(0, results.size())
             .mapToObj(i -> {
                 PutRecordsRequestEntry e = entries.get(i);
                 String errorCode = results.get(i).getErrorCode();
@@ -84,7 +87,7 @@ public class RetryingBatchedClickEventsToKinesis extends BatchedClickEventsToKin
             .filter(Optional::isPresent)
             .map(Optional::get)
             .collect(Collectors.toList());
-            
+
         entries.clear();
         retries.forEach(e -> addEntry(e));
     }
