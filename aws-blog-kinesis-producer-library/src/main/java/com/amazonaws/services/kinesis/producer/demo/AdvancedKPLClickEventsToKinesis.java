@@ -69,7 +69,8 @@ public class AdvancedKPLClickEventsToKinesis
             @Override
             public void onFailure(Throwable t) {
                 if (t instanceof UserRecordFailedException) {
-                    UserRecordFailedException e = (UserRecordFailedException) t;
+                    UserRecordFailedException e =
+                            (UserRecordFailedException) t;
                     UserRecordResult result = e.getResult();
 
                     String errorList =
@@ -78,7 +79,8 @@ public class AdvancedKPLClickEventsToKinesis
                                 "Delay after prev attempt: %d ms, "
                                         + "Duration: %d ms, Code: %s, "
                                         + "Message: %s",
-                                a.getDelay(), a.getDuration(), a.getErrorCode(),
+                                a.getDelay(), a.getDuration(),
+                                a.getErrorCode(),
                                 a.getErrorMessage()))
                             .collect(Collectors.toList()), "\n");
 
