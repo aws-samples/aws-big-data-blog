@@ -7,16 +7,19 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
 
-public class AggregatingClickEventsToKinesis extends AbstractClickEventsToKinesis {
+public class AggregatingClickEventsToKinesis
+        extends AbstractClickEventsToKinesis {
     private final AmazonKinesis kinesis;
-    
+
     private String partitionKey;
     private String payload;
     private int numAggregated;
-    
-    public AggregatingClickEventsToKinesis(BlockingQueue<ClickEvent> inputQueue) {
+
+    public AggregatingClickEventsToKinesis(
+            BlockingQueue<ClickEvent> inputQueue) {
         super(inputQueue);
-        kinesis = new AmazonKinesisClient().withRegion(Regions.fromName(REGION));
+        kinesis = new AmazonKinesisClient().withRegion(
+                Regions.fromName(REGION));
         reset();
     }
 
@@ -25,18 +28,18 @@ public class AggregatingClickEventsToKinesis extends AbstractClickEventsToKinesi
         ClickEvent event = inputQueue.take();
         String partitionKey = event.getSessionId();
         String payload = event.getPayload();
-        
+
         if (this.partitionKey == null) {
-            this.partitionKey = partitionKey; 
+            this.partitionKey = partitionKey;
         }
-        
+
         if (this.payload == null) {
             this.payload = payload;
         } else {
             this.payload += "\r\n" + payload;
         }
         this.numAggregated++;
-        
+
         if (this.payload.length() >= 1024) {
             kinesis.putRecord(
                     STREAM_NAME,
@@ -46,7 +49,7 @@ public class AggregatingClickEventsToKinesis extends AbstractClickEventsToKinesi
             reset();
         }
     }
-    
+
     private void reset() {
         this.partitionKey = null;
         this.payload = null;

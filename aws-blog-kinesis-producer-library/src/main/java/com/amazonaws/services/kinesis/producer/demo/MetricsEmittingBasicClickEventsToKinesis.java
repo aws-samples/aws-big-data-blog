@@ -15,14 +15,15 @@ import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.kinesis.model.PutRecordResult;
 
 public class MetricsEmittingBasicClickEventsToKinesis
-extends AbstractClickEventsToKinesis {
+        extends AbstractClickEventsToKinesis {
     private final AmazonKinesis kinesis;
     private final AmazonCloudWatch cw;
-    
+
     protected MetricsEmittingBasicClickEventsToKinesis(
             BlockingQueue<ClickEvent> inputQueue) {
         super(inputQueue);
-        kinesis = new AmazonKinesisClient().withRegion(Regions.fromName(REGION));
+        kinesis = new AmazonKinesisClient().withRegion(
+                Regions.fromName(REGION));
         cw = new AmazonCloudWatchClient().withRegion(Regions.fromName(REGION));
     }
 
@@ -30,16 +31,19 @@ extends AbstractClickEventsToKinesis {
     protected void runOnce() throws Exception {
         ClickEvent event = inputQueue.take();
         String partitionKey = event.getSessionId();
-        ByteBuffer data = ByteBuffer.wrap(event.getPayload().getBytes("UTF-8"));
+        ByteBuffer data = ByteBuffer.wrap(
+                event.getPayload().getBytes("UTF-8"));
         recordsPut.getAndIncrement();
-        
-        PutRecordResult res = kinesis.putRecord(STREAM_NAME, data, partitionKey);
-        
+
+        PutRecordResult res = kinesis.putRecord(
+                STREAM_NAME, data, partitionKey);
+
         MetricDatum d = new MetricDatum()
             .withDimensions(
                 new Dimension().withName("StreamName").withValue(STREAM_NAME),
                 new Dimension().withName("ShardId").withValue(res.getShardId()),
-                new Dimension().withName("Host").withValue(InetAddress.getLocalHost().toString()))
+                new Dimension().withName("Host").withValue(
+                        InetAddress.getLocalHost().toString()))
             .withValue(1.0)
             .withMetricName("RecordsPut");
         cw.putMetricData(new PutMetricDataRequest()

@@ -7,20 +7,22 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class MultithreadedClickEventsToKinesis extends AbstractClickEventsToKinesis {
+public class MultithreadedClickEventsToKinesis
+        extends AbstractClickEventsToKinesis {
     private final List<BasicClickEventsToKinesis> children;
     private final ExecutorService executor;
-    
-    public MultithreadedClickEventsToKinesis(BlockingQueue<ClickEvent> inputQueue) {
+
+    public MultithreadedClickEventsToKinesis(
+            BlockingQueue<ClickEvent> inputQueue) {
         super(inputQueue);
-        
+
         children = IntStream.range(0, 70)
                 .mapToObj(i -> new BasicClickEventsToKinesis(inputQueue))
                 .collect(Collectors.toList());
-        
+
         executor = Executors.newCachedThreadPool();
     }
-    
+
     @Override
     public void run() {
         children.forEach(c -> executor.submit(c));

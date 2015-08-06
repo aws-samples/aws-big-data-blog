@@ -20,19 +20,20 @@ public class KPLClickEventsToKinesis extends AbstractClickEventsToKinesis {
     protected void runOnce() throws Exception {
         ClickEvent event = inputQueue.take();
         String partitionKey = event.getSessionId();
-        ByteBuffer data = ByteBuffer.wrap(event.getPayload().getBytes("UTF-8"));
+        ByteBuffer data = ByteBuffer.wrap(
+                event.getPayload().getBytes("UTF-8"));
         while (kinesis.getOutstandingRecordsCount() > 5e4) {
             Thread.sleep(1);
         }
         kinesis.addUserRecord(STREAM_NAME, partitionKey, data);
         recordsPut.getAndIncrement();
     }
-    
+
     @Override
     public long recordsPut() {
         return super.recordsPut() - kinesis.getOutstandingRecordsCount();
     }
-    
+
     @Override
     public void stop() {
         super.stop();

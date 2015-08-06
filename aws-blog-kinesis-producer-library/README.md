@@ -1,10 +1,12 @@
-#Implementing Efficient and Reliable Producers for AWS Kinesis with the Kinesis Producer Library
+# Implementing Efficient and Reliable Producers with the Amazon Kinesis Producer Library
 
 ## Overview
 
-This repository contains the code samples used in the AWS Big Data Blog post of the same name (TODO link).
+This repository contains the code samples used in the [AWS Big Data Blog post](https://blogs.aws.amazon.com/bigdata/post/Tx3ET30EGDKUUI2/Implementing-Efficient-and-Reliable-Producers-with-the-Amazon-Kinesis-Producer-L) of the same name.
 
 The code contains a single java package with various implementations of the base class `AbstractClickEventsToKinesis` as described in the blog post. There is a driver class called `ClickEventsToKinesisTestDriver` that can be executed to test out the implementations.
+
+[Maven](https://maven.apache.org/) is used for building and dependency management.
 
 ## Running the Sample
 
