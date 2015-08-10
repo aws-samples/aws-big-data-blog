@@ -1,0 +1,4 @@
+#!/bin/bash
+
+scp target/s3-log-gen.jar $1:
+ssh $1 'java -jar s3-log-gen.jar'
