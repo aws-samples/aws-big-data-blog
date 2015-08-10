@@ -2,6 +2,7 @@
 The code in this directory accompanies the AWS Big Data Blog post here: <link>
 
 ## Contents
+
 This subtree contains the following code samples:
 
 - **s3-index-lambda:** Simple JS implementation of a Lambda function for indexing S3 buckets
@@ -11,6 +12,8 @@ This subtree contains the following code samples:
 
 ## Deploying the sample
 
+The following instructions provide a detailed guide to manually deploying each component of the S3 index using the AWS Console. Alternatively you can run the `createstack` function from a bash shell with the AWS CLI installed. This script will prompt you for the name of a bucket to create that will be indexed as well as the name of an existing bucket where the Lambda code will be uploaded in order to deploy it through the provided CloudFormation template.
+
 To deploy the sample Lambda function and its dependencies, you must create the following resources:
 
 1. S3 bucket to be indexed
@@ -18,7 +21,7 @@ To deploy the sample Lambda function and its dependencies, you must create the f
 1. IAM Role for the Lambda function to assume that grants permission for reading from the S3 bucket and writting to DynamoDB.
 1. Lambda function for handling S3 object creation events
 
-The following steps assume you have created the S3 bucket and it is named "mybucket".
+The following steps assume you have created the S3 bucket and it is named "mybucket". You should replace any instances of the string "mybucket" with the name of the bucket you have created.
 
 ### Creating the DynamoDB table
 
@@ -66,8 +69,6 @@ For this example you should only need to provision 1 read capacity unit for the 
 
 For the purposes of this demo you can disable streams and basic alarms.
 
-Once your table has been created, note the ARN from the Details tab for your table.
-
 
 ### Creating the Lambda execution Role
 
@@ -87,7 +88,7 @@ Select **Custom Policy**.
 
 Enter **s3-read-ddb-write** for the policy name.
 
-Copy the following document into the Policy Document text area. Ensure that you replace the [Table ARN] placeholder with the ARN of the table you created in the previous section.
+Copy the following document into the Policy Document text area.
 
 ```JSON
 {
@@ -108,7 +109,7 @@ Copy the following document into the Policy Document text area. Ensure that you 
                 "dynamodb:PutItem"
             ],
             "Resource": [
-                "[Table ARN]"
+                "*"
             ]
         }
     ]
@@ -145,3 +146,44 @@ After creating the function add an event source under the Event sources tab with
 | **Suffix** | blank |
 | **Enable event source** | Enable now |
 
+At this point any objects that are added to your S3 bucket that have a key in the correct format should be automatically added to the DynamoDB index table.
+
+The expected key format is [4-digit hash]/[server id]/[year]-[month]-[day]-[hour]-[minute]/[customer id]-[epoch timestamp].data
+
+Example: a5b2/i-31cc02/2015-07-05-00-25/87423-1436055953839.data
+
+## Running the log generator
+
+Included in this repository is a simple program for generating dummy log files and uploading them to S3. This program simulates multiple servers ingesting data and writing the resultant log files to the specified bucket.
+
+The log generator is written in Java. It requires Java 8 and Maven to build and run. The following instructions assume you have Maven and Java properly installed on your machine.
+
+### Build
+
+From the s3-log-generator directory run:
+
+```
+$ mvn compile
+```
+
+### Run
+
+Running this example assumes you have properly configured AWS credentials set up with access to upload to your bucket. See the (documentation)[http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files] on the configuring the AWS CLI for more information.
+
+From the s3-log-generator directory run:
+
+```
+$ mvn exec:java
+```
+
+When prompted provide the following information:
+
+```
+S3 bucket: <Your Bucket Name>
+Number of servers: 100
+Upload rate (objects/sec): 10
+```
+
+The number of servers can be any number you choose. This simply sets how many server IDs are used when generating data.
+
+The upload rate is also configurable, but you should make sure you have provisioned enough throughput for your DynamoDB table and global indexes in order to handle the rate you specify.
