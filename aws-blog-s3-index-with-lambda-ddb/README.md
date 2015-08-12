@@ -5,17 +5,14 @@ The code in this directory accompanies the AWS Big Data Blog on Building and Mai
 
 This subtree contains the following code samples:
 
-- **s3-index-lambda:** Simple JS implementation of a Lambda function for indexing S3 buckets
+- **s3-index-lambda:** Simple JS implementation of a AWS Lambda function for indexing S3 buckets
 - **s3-log-generator:** Java program used to generate dummy objects and upload them to S3 in order to test the index system.
 - **query-examples:** Example scripts for querying the index
-- **s3-index-example.template:** CloudFormation template for creating an S3 bucket, DynamoDB table and Lambda function.
-- **createstack:** A shell script that will upload the current version of the Lambda JS code to a specified bucket and then launch the CloudFormation stack with the appropriate variables supplied.
+- **s3-index-example.template:** AWS CloudFormation template for creating an S3 bucket, Amazon DynamoDB table and Lambda function.
 
-## Deploying the sample
+## Deploying the sample via the AWS Console
 
 A video walkthrough of these steps is available (here)[https://s3.amazonaws.com/awsbigdatablog/S3%2BIndex%2BDeployment%2BWalkthrough.mp4].
-
-The following instructions provide a detailed guide to manually deploying each component of the S3 index using the AWS Console. Alternatively you can run the `createstack` function from a bash shell with the AWS CLI installed. This script will prompt you for the name of a bucket to create that will be indexed as well as the name of an existing bucket where the Lambda code will be uploaded in order to deploy it through the provided CloudFormation template.
 
 To deploy the example index, you must create the following resources:
 
@@ -155,8 +152,22 @@ The expected key format is [4-digit hash]/[server id]/[year]-[month]-[day]-[hour
 
 Example: a5b2/i-31cc02/2015-07-05-00-25/87423-1436055953839.data
 
+## Deploying the sample via CloudFormation
 
-### Test the system
+To use the provided s3-index-example.template CloudFormation template complete the following steps:
+
+ 1. Create a zip file containing the index.js file from the s3-index-lambda directory.
+ 2. Upload the zip file to an S3 bucket.
+ 3. Launch the s3-index-example.template via CloudFormation with the following parameters:
+ 
+ 	* BucketName: Name of the new bucket to create that will be indexed
+ 	* LambdaCodeBucket: Name of the bucket where you uploaded the zip file in step 2
+ 	* LambdaCodeKey: The S3 key of the zip file uploaded in step 2
+ 
+ 4. After the CloudFormation stack is created, add an event source to the Lambda function for the "Object created" event on the new S3 bucket.
+
+
+## Testing the system
 
 You can now use the (log generator)[s3-log-generator] to add objects to the S3 buckets and test the system.
 
