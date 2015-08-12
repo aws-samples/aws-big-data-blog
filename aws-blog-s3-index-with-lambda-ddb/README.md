@@ -1,24 +1,28 @@
 # Serverless S3 Metadata Index
-The code in this directory accompanies the AWS Big Data Blog post here: <link>
+The code in this directory accompanies the AWS Big Data Blog on Building and Maintaining an Amazon S3 Metadata Index without Servers.
 
 ## Contents
+
 This subtree contains the following code samples:
 
-- **s3-index-lambda:** Simple JS implementation of a Lambda function for indexing S3 buckets
+- **s3-index-lambda:** Simple JS implementation of a AWS Lambda function for indexing S3 buckets
 - **s3-log-generator:** Java program used to generate dummy objects and upload them to S3 in order to test the index system.
-- **s3-index-example.template:** CloudFormation template for creating an S3 bucket, DynamoDB table and Lambda function.
-- **createstack:** A shell script that will upload the current version of the Lambda JS code to a specified bucket and then launch the CloudFormation stack with the appropriate variables supplied.
+- **query-examples:** Example scripts for querying the index
+- **s3-index-example.template:** AWS CloudFormation template for creating an S3 bucket, Amazon DynamoDB table and Lambda function.
 
-## Deploying the sample
+## Deploying the sample via the AWS Console
 
-To deploy the sample Lambda function and its dependencies, you must create the following resources:
+A video walkthrough of these steps is available (here)[https://s3.amazonaws.com/awsbigdatablog/S3%2BIndex%2BDeployment%2BWalkthrough.mp4].
+
+To deploy the example index, you must create the following resources:
 
 1. S3 bucket to be indexed
 1. DynamoDB table to hold the meta-data index itself
 1. IAM Role for the Lambda function to assume that grants permission for reading from the S3 bucket and writting to DynamoDB.
 1. Lambda function for handling S3 object creation events
 
-The following steps assume you have created the S3 bucket and it is named "mybucket".
+
+The following steps assume you have created the S3 bucket and it is named "mybucket". You should replace any instances of the string "mybucket" with the name of the bucket you have created.
 
 ### Creating the DynamoDB table
 
@@ -66,9 +70,6 @@ For this example you should only need to provision 1 read capacity unit for the 
 
 For the purposes of this demo you can disable streams and basic alarms.
 
-Once your table has been created, note the ARN from the Details tab for your table.
-
-
 ### Creating the Lambda execution Role
 
 In order for the Lambda function to execute with the appropriate permissions you'll need to create an IAM role for it to use.
@@ -87,7 +88,7 @@ Select **Custom Policy**.
 
 Enter **s3-read-ddb-write** for the policy name.
 
-Copy the following document into the Policy Document text area. Ensure that you replace the [Table ARN] placeholder with the ARN of the table you created in the previous section.
+Copy the following document into the Policy Document text area.
 
 ```JSON
 {
@@ -108,7 +109,7 @@ Copy the following document into the Policy Document text area. Ensure that you 
                 "dynamodb:PutItem"
             ],
             "Resource": [
-                "[Table ARN]"
+                "*"
             ]
         }
     ]
@@ -145,3 +146,29 @@ After creating the function add an event source under the Event sources tab with
 | **Suffix** | blank |
 | **Enable event source** | Enable now |
 
+At this point any objects that are added to your S3 bucket that have a key in the correct format should be automatically added to the DynamoDB index table.
+
+The expected key format is [4-digit hash]/[server id]/[year]-[month]-[day]-[hour]-[minute]/[customer id]-[epoch timestamp].data
+
+Example: a5b2/i-31cc02/2015-07-05-00-25/87423-1436055953839.data
+
+## Deploying the sample via CloudFormation
+
+To use the provided s3-index-example.template CloudFormation template complete the following steps:
+
+ 1. Create a zip file containing the index.js file from the s3-index-lambda directory.
+ 2. Upload the zip file to an S3 bucket.
+ 3. Launch the s3-index-example.template via CloudFormation with the following parameters:
+ 
+ 	* BucketName: Name of the new bucket to create that will be indexed
+ 	* LambdaCodeBucket: Name of the bucket where you uploaded the zip file in step 2
+ 	* LambdaCodeKey: The S3 key of the zip file uploaded in step 2
+ 
+ 4. After the CloudFormation stack is created, add an event source to the Lambda function for the "Object created" event on the new S3 bucket.
+
+
+## Testing the system
+
+You can now use the (log generator)[s3-log-generator] to add objects to the S3 buckets and test the system.
+
+After you have added some objects you can refer to the (query examples)[query-examples] to see how to use the index to run the reports and analyses discussed in the post.
