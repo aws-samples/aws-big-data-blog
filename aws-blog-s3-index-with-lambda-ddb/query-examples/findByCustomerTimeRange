@@ -1,0 +1,18 @@
+#!/bin/bash
+
+TABLE_NAME=s3index-example-index
+CUST_ID=00001
+START_TS="2015-08-10T15:00"
+END_TS="2015-08-10T17:00"
+
+read -r -d '' EXP_VALS << EOM
+{
+  ":custId": {"S":"$CUST_ID"},
+  ":startTs": {"S":"$START_TS"},
+  ":endTs": {"S":"$END_TS"}
+}
+EOM
+
+EXP_ATTR_NAMES="{\"#ts\": \"TS-ServerID\"}"
+
+aws dynamodb query --table-name $TABLE_NAME --key-condition-expression "CustID = :custId and #ts BETWEEN :startTs AND :endTs" --expression-attribute-values "$EXP_VALS" --expression-attribute-names "$EXP_ATTR_NAMES"
