@@ -1,5 +1,5 @@
 # Serverless S3 Metadata Index
-The code in this directory accompanies the AWS Big Data Blog post here: <link>
+The code in this directory accompanies the AWS Big Data Blog on Building and Maintaining an Amazon S3 Metadata Index without Servers.
 
 ## Contents
 
@@ -7,14 +7,17 @@ This subtree contains the following code samples:
 
 - **s3-index-lambda:** Simple JS implementation of a Lambda function for indexing S3 buckets
 - **s3-log-generator:** Java program used to generate dummy objects and upload them to S3 in order to test the index system.
+- **query-examples:** Example scripts for querying the index
 - **s3-index-example.template:** CloudFormation template for creating an S3 bucket, DynamoDB table and Lambda function.
 - **createstack:** A shell script that will upload the current version of the Lambda JS code to a specified bucket and then launch the CloudFormation stack with the appropriate variables supplied.
 
 ## Deploying the sample
 
+A video walkthrough of these steps is available (here)[https://s3.amazonaws.com/awsbigdatablog/S3%2BIndex%2BDeployment%2BWalkthrough.mp4].
+
 The following instructions provide a detailed guide to manually deploying each component of the S3 index using the AWS Console. Alternatively you can run the `createstack` function from a bash shell with the AWS CLI installed. This script will prompt you for the name of a bucket to create that will be indexed as well as the name of an existing bucket where the Lambda code will be uploaded in order to deploy it through the provided CloudFormation template.
 
-To deploy the sample Lambda function and its dependencies, you must create the following resources:
+To deploy the example index, you must create the following resources:
 
 1. S3 bucket to be indexed
 1. DynamoDB table to hold the meta-data index itself
@@ -152,38 +155,9 @@ The expected key format is [4-digit hash]/[server id]/[year]-[month]-[day]-[hour
 
 Example: a5b2/i-31cc02/2015-07-05-00-25/87423-1436055953839.data
 
-## Running the log generator
 
-Included in this repository is a simple program for generating dummy log files and uploading them to S3. This program simulates multiple servers ingesting data and writing the resultant log files to the specified bucket.
+### Test the system
 
-The log generator is written in Java. It requires Java 8 and Maven to build and run. The following instructions assume you have Maven and Java properly installed on your machine.
+You can now use the (log generator)[s3-log-generator] to add objects to the S3 buckets and test the system.
 
-### Build
-
-From the s3-log-generator directory run:
-
-```
-$ mvn compile
-```
-
-### Run
-
-Running this example assumes you have properly configured AWS credentials set up with access to upload to your bucket. See the (documentation)[http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files] on the configuring the AWS CLI for more information.
-
-From the s3-log-generator directory run:
-
-```
-$ mvn exec:java
-```
-
-When prompted provide the following information:
-
-```
-S3 bucket: <Your Bucket Name>
-Number of servers: 100
-Upload rate (objects/sec): 10
-```
-
-The number of servers can be any number you choose. This simply sets how many server IDs are used when generating data.
-
-The upload rate is also configurable, but you should make sure you have provisioned enough throughput for your DynamoDB table and global indexes in order to handle the rate you specify.
+After you have added some objects you can refer to the (query examples)[query-examples] to see how to use the index to run the reports and analyses discussed in the post.
