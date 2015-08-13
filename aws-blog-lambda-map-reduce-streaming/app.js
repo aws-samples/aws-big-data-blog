@@ -37,7 +37,7 @@ app.get('/scatter', function(req, res){
 });
 
 app.get('/stream', function(req, res){
-  req.socket.setTimeout(Infinity);
+  req.socket.setTimeout(0);
 
   //send headers for event-stream connection
   res.writeHead(200, {

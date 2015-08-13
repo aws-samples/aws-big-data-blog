@@ -8,7 +8,7 @@ then
    echo "Did not receive second parameter: region"
    exit
 fi
-zip Libs.zip cascade.js wordcount.js &&
+zip Libs.zip -r node_modules cascade.js wordcount.js &&
 aws lambda create-function \
    --region $2 \
    --function-name blog_cascade \
@@ -24,7 +24,6 @@ aws lambda create-function \
    --function-name wordcount \
    --zip-file fileb://Libs.zip \
    --role $1 \
-   --mode event \
    --handler wordcount.handler \
    --runtime nodejs \
    --timeout 60 \
