@@ -1,0 +1,258 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "S3 index using Lambda and DynamoDB. This template creates a stack with an S3 bucket to be indexed, a DynamoDB table to hold the index entries and a Lambda function which puts index entries into the table.",
+    "Parameters": {
+        "BucketName": {
+            "Description": "The name for the example bucket. E.g. s3-index-example.yourdomain.com.",
+            "Type": "String"
+        },
+        "LambdaCodeBucket": {
+            "Description": "The S3 bucket where the lambda function deployment package is stored.",
+            "Type": "String"
+        },
+        "LambdaCodeKey": {
+            "Description": "The S3 key of the lambda function deployment package within the LambdaCodeBucket",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Ref": "BucketName"
+                }
+            }
+        },
+        "IndexTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "TableName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "BucketName"
+                            },
+                            "index"
+                        ]
+                    ]
+                },
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "CustID",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "ServerID",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "TS-ServerID",
+                        "AttributeType": "S"
+                    },
+					{
+						"AttributeName": "HasTransaction",
+						"AttributeType": "S"
+					}
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "CustID",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "TS-ServerID",
+                        "KeyType": "RANGE"
+                    }
+                ],
+                "LocalSecondaryIndexes": [
+                    {
+                        "IndexName": "CustomerTransactions",
+                        "KeySchema": [
+                            {
+                                "AttributeName": "CustID",
+                                "KeyType": "HASH"
+                            },
+                            {
+                                "AttributeName": "HasTransaction",
+                                "KeyType": "RANGE"
+                            }
+                        ],
+                        "Projection": {
+                            "NonKeyAttributes": [
+                                "Key"
+                            ],
+                            "ProjectionType": "INCLUDE"
+                        }
+                    }
+                ],
+                "GlobalSecondaryIndexes": [
+                    {
+                        "IndexName": "ServerIndex",
+                        "KeySchema": [
+                            {
+                                "AttributeName": "ServerID",
+                                "KeyType": "HASH"
+                            },
+                            {
+                                "AttributeName": "TS-ServerID",
+                                "KeyType": "RANGE"
+                            }
+                        ],
+                        "Projection": {
+                            "NonKeyAttributes": [
+                                "Key"
+                            ],
+                            "ProjectionType": "INCLUDE"
+                        },                        
+						"ProvisionedThroughput": {
+							"ReadCapacityUnits": "1",
+							"WriteCapacityUnits": "10"
+						}
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "1",
+                    "WriteCapacityUnits": "10"
+                }
+            }
+        },
+        "LambdaIndexerRole": {
+            "Type": "AWS::IAM::Role",
+            "DependsOn": [
+                "S3Bucket",
+                "IndexTable"
+            ],
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "logs",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "arn:aws:logs:*:*:*"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "read-s3",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:GetObject",
+                                        "s3:ListBucket"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "arn:aws:s3:::",
+                                                    {
+                                                        "Ref": "BucketName"
+                                                    },
+                                                    "/*"
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "put-ddb",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "dynamodb:PutItem",
+                                        "dynamodb:UpdateItem"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::Join": [
+                                                "/",
+                                                [
+                                                    {
+                                                        "Fn::Join": [
+                                                            ":",
+                                                            [
+                                                                "arn:aws:dynamodb",
+                                                                {
+                                                                    "Ref": "AWS::Region"
+                                                                },
+                                                                {
+                                                                    "Ref": "AWS::AccountId"
+                                                                },
+                                                                "table"
+                                                            ]
+                                                        ]
+                                                    },
+                                                    {
+                                                        "Ref": "IndexTable"
+                                                    }
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "IndexerLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": {
+                        "Ref": "LambdaCodeBucket"
+                    },
+                    "S3Key": {
+                        "Ref": "LambdaCodeKey"
+                    }
+                },
+                "Description": "Function for indexing S3 buckets",
+                "Handler": "index.handler",
+                "MemorySize": 128,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaIndexerRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "nodejs"
+            }
+        }
+    },
+    "Outputs": {}
+}

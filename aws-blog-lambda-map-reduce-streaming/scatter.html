@@ -1,0 +1,236 @@
+<html>
+<head>
+<style>
+* {
+  font-family: sans-serif;
+}
+.bignum {
+  font-size: 60px;
+  padding: 50px;
+  background-color: white;
+  color: white;
+  text-align: center;
+}
+.stats {
+  font-size: 30px;
+}
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<div id="status">In progress...</div>
+<div id="scatter-load"></div>
+<div id="logs"></div>
+<script>
+function numberFormatter(number){
+  if (number > 1000000000){
+    return Math.round(number / 1000000000 * 100)/100 + 'b';
+  }
+  if (number > 1000000){
+    return Math.round(number / 1000000 * 100)/100 + 'm';
+  }
+  if (number > 1000){
+    return Math.round(number / 1000 * 100)/100 + 'k';
+  }
+  return number;
+}
+
+// D3 code for scatter plot is a heavily modified version of http://jsfiddle.net/Q567s/155/
+
+// Setup data
+var dataset = [];  // Initialize empty array
+
+// Setup settings for graphic
+var canvas_width = 500;
+var canvas_height = 300;
+var padding = 50;  // for chart edges
+
+// Create scale functions
+var xScale = d3.scale.linear()  // xScale is width of graphic
+  .domain([0, d3.max(dataset, function(d) {
+      return d[0];  // input domain
+  })])
+  .range([padding, canvas_width - padding * 2]); // output range
+
+var yScale = d3.scale.linear()  // yScale is height of graphic
+  .domain([0, d3.max(dataset, function(d) {
+      return d[1];  // input domain
+  })])
+  .range([canvas_height - padding, padding]);  // remember y starts on top going down so we flip
+
+// Define X axis
+var xAxis = d3.svg.axis()
+  .scale(xScale)
+  .orient("bottom")
+  .ticks(5)
+  .tickFormat(numberFormatter);
+var xValue = function(d) { return d[0];}
+
+// Define Y axis
+var yAxis = d3.svg.axis()
+  .scale(yScale)
+  .orient("left")
+  .ticks(5)
+  .tickFormat(numberFormatter);
+var yValue = function(d) { return d[1];}
+
+// Create SVG element
+var svg = d3.select("#scatter-load")  // This is where we put our vis
+  .append("svg")
+  .attr("width", canvas_width)
+  .attr("height", canvas_height)
+
+// Create Circles
+svg.selectAll("circle")
+  .data(dataset)
+  .enter()
+  .append("circle")  // Add circle svg
+  .attr("cx", function(d) {
+      return xScale(d[0]);  // Circle's X
+  })
+  .attr("cy", function(d) {  // Circle's Y
+      return yScale(d[1]);
+  })
+  .attr("r", 2);  // radius
+
+// Add to X axis
+svg.append("g")
+  .attr("class", "x axis")
+  .attr("transform", "translate(0," + (canvas_height - padding) +")")
+  .call(xAxis)
+  .append("text")
+  .attr("class", "label")
+  .attr("x", (canvas_width - padding))
+  .attr("y", +6)
+  .style("text-anchor", "end")
+  .text('Words');
+
+// Add to Y axis
+svg.append("g")
+  .attr("class", "y axis")
+  .attr("transform", "translate(" + padding +",0)")
+  .call(yAxis)
+  .append("text")
+  .attr("class", "label")
+  .attr("transform", "rotate(-90)")
+  .attr("y", -6)
+  .attr("dy", ".71em")
+  .style("text-anchor", "end")
+  .text('Lines');
+
+// add the tooltip area to the webpage
+var tooltip = d3.select("body").append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0);
+
+function updateScatter(){
+  // Update scale domains
+  xScale.domain([0, d3.max(dataset, function(d) {
+    return d[0]; })]);
+  yScale.domain([0, d3.max(dataset, function(d) {
+    return d[1]; })]);
+
+  // Update circles
+  svg.selectAll("circle")
+    .data(dataset)  // Update with new data
+    .transition()  // Transition from old to new
+    .duration(1000)  // Length of animation
+    .each("start", function() {  // Start animation
+      d3.select(this)  // 'this' means the current element
+        .attr("fill", "red")  // Change color
+        .attr("r", 5);  // Change size
+    })
+    .delay(function(d, i) {
+      return i / dataset.length * 500;  // Dynamic delay (i.e. each item delays a little longer)
+    })
+    .attr("cx", function(d) {
+      return xScale(d[0]);  // Circle's X
+    })
+    .attr("cy", function(d) {
+      return yScale(d[1]);  // Circle's Y
+    })
+    .each("end", function() {  // End animation
+      d3.select(this)  // 'this' means the current element
+        .transition()
+        .duration(500)
+        .attr("fill", "black")  // Change color
+        .attr("r", 2);  // Change radius
+    });
+
+  
+  // Create Circles
+  svg.selectAll("circle")
+    .data(dataset)
+    .enter()
+    .append("circle")  // Add circle svg
+    .attr("cx", function(d) {
+      return xScale(d[0]);  // Circle's X
+    })
+    .attr("cy", function(d) {  // Circle's Y
+      return yScale(d[1]);
+    })
+    .attr("r", 2)  // radius
+    .on("mouseover", function(d) {
+      tooltip.transition()
+        .duration(200)
+        .style("opacity", .9);
+      tooltip.html('Key: ' + d[2] + '<br/>Words: ' + xValue(d) +
+        '<br/>Lines: ' + yValue(d))
+        .style("left", (d3.event.pageX + 5) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+        tooltip.transition()
+        .duration(500)
+        .style("opacity", 0);
+      });
+
+  // Update X Axis
+  svg.select(".x.axis")
+    .transition()
+    .duration(1000)
+    .call(xAxis);
+
+  // Update Y Axis
+  svg.select(".y.axis")
+    .transition()
+    .duration(100)
+    .call(yAxis);
+}
+
+var source = new EventSource('stream?no_agg=1&prefix=');
+source.addEventListener('message', function(e) {
+  console.log(e.data);
+  var result = JSON.parse(e.data);
+  if (result.complete){
+    console.log('All done!');
+    document.getElementById('status').innerHTML = 'Complete.';
+    source.close();
+    return;
+  }
+  else if (result.logdata){
+    var div = document.createElement('div');
+    div.innerHTML = result.logdata;
+    var logsDiv = document.getElementById('logs');
+    logsDiv.appendChild(div);
+    // Only keep the latest logs
+    while (logsDiv.children.length > 20)
+      logsDiv.children[0].remove();
+    return;
+  }
+  dataset.push([result[3], result[4], result[2]]);
+  updateScatter();
+}, false);
+source.addEventListener('error', function(e){
+  console.log('eventstream error', e);
+  source.close();
+});
+</script>
+</body>
+</html>
