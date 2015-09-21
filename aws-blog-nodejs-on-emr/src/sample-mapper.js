@@ -3,8 +3,8 @@
 var events = require('events');
 var emitter = new events.EventEmitter();
 
-var line = '';
-var lineEvent = 'line';
+var remaining = '';
+var lineReady = 'lineReady';
 var dataReady = 'dataReady';
 
 // escape all control characters so that they are plain text in the output
@@ -48,21 +48,21 @@ emitter.on(dataReady, function(arr) {
 
 // generate a JSON object from the captured input data, and then generate
 // the required output
-emitter.on(lineEvent, function(l) {
+emitter.on(lineReady, function(l) {
 	var obj;
 
 	// create the JSON object from the input event. if we cannot, then we discard
 	// this item
 	//
 	// TODO Generate an exception here instead?
-	if (!line || line == '') {
+	if (!l || l == '') {
 		return;
 	}
 	
 	try {
-		obj = JSON.parse(line);
+		obj = JSON.parse(l);
 	} catch (err) {
-		process.stderr.write('Error Processing Line ' + line + '\n');
+		process.stderr.write('Error Processing Line ' + l + '\n');
 		process.stderr.write(err);
 		return;
 	}
@@ -87,32 +87,22 @@ emitter.on(lineEvent, function(l) {
 
 // fires on every block of data read from stdin
 process.stdin.on('data', function(chunk) {
-	// chunk and emit on newline
-	lines = chunk.split("\n")
-	
-	if (lines.length > 0) {
-		// append the first chunk to the existing buffer
-		line += lines[0]
-		
-		if (lines.length > 1) {
-			// emit the current buffer
-			emitter.emit(lineEvent,line);
-
-			// go through the rest of the lines and emit them, buffering the last
-			for (i=1; i<lines.length; i++) {
-				if (i < lines.length) {
-					emitter.emit(lineEvent,lines[i]);
-				} else {
-					line = lines[i];
-				}
-			}
-		}
-	}
+  var capture = chunk.split('\n');
+  
+  for (var i=0;i<capture.length-1; i++) {
+      if (i==0) {
+          emitter.emit(lineReady,remaining + capture[i]);
+      } else if (i<capture.length-1) {
+          emitter.emit(lineReady,capture[i]);
+      } else {
+          remaining = capture[i];
+      }
+  }
 });
 
 // fires when stdin is completed being read
 process.stdin.on('end', function() {
-	emitter.emit(lineEvent,line);
+	emitter.emit(lineReady,remaining);
 });
 
 // set up the encoding for STDIN
