@@ -67,7 +67,7 @@ emitter.on(lineReady,function(data) {
 process.stdin.on('data', function(chunk) {
 	var capture = chunk.split('\n');
 
-	for (var i=0;i<capture.length; i++) {
+	for (var i=0;i<capture.length-1; i++) {
 		if (i==0) {
 			emitter.emit(lineReady,remaining + capture[i]);
 		} else if (i<capture.length-1) {
