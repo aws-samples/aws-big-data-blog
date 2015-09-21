@@ -1,0 +1,12 @@
+#!/bin/bash
+
+TABLE_NAME=s3index-example-index
+CUST_ID=00027
+
+read -r -d '' EXP_VALS << EOM
+{
+  ":custId": {"S":"$CUST_ID"}
+}
+EOM
+
+aws dynamodb query --table-name $TABLE_NAME --index-name CustomerTransactions --key-condition-expression "CustID = :custId" --expression-attribute-values "$EXP_VALS"
