@@ -11,7 +11,15 @@ Please refer to the blog post for detailed usage. [Node.js Streaming MapReduce w
 [AWS Command Line Interface (CLI)]:http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html
 [Node.js Streaming MapReduce with Amazon EMR]:http://blogs.aws.amazon.com/bigdata/post/Tx21KEQW59RMMGS/Node-js-Streaming-MapReduce-with-Amazon-EMR
 
-## Running Samples
+## Run Sample Locally
+
+We've provided ```test-local.sh``` which you can use to test local changes with one of the sample tweet files. To run it, simply run from a Terminal:
+
+```
+./test-local.sh
+```
+
+## Run Sample on EMR
 
 Create a new Elastic MapReduce Cluster with Node.js and NPM installed:
 
