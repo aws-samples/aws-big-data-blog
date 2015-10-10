@@ -11,27 +11,19 @@
     <url>http://maven.apache.org</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <aws-sdk.version>1.10.0</aws-sdk.version>
-        <aws-sdk-test.version>1.9.32</aws-sdk-test.version>
-
-        <joda-time.version>2.3</joda-time.version>
+        <aws-sdk.version>1.10.24</aws-sdk.version>
+       
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
     </properties>
 
     <dependencies>
-        <!--<dependency>
+
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk</artifactId>
             <version>${aws-sdk.version}</version>
             <scope>provided</scope>
-        </dependency>-->
-
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-test</artifactId>
-            <version>${aws-sdk-test.version}</version>
         </dependency>
 
         <dependency>
@@ -41,18 +33,10 @@
             <!--<scope>provided</scope>-->
         </dependency>
 
-
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-events</artifactId>
             <version>1.0.0</version>
-            <!--<scope>provided</scope>-->
-        </dependency>
-		
-		<dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>${joda-time.version}</version>
             <!--<scope>provided</scope>-->
         </dependency>
   </dependencies>
@@ -62,7 +46,7 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <excludes>
-                   <!--<exclude>AwsCredentials.properties</exclude>-->
+                   <exclude>AwsCredentials.properties</exclude>
                 </excludes>
             </resource>
         </resources>
@@ -107,7 +91,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.amazonaws.proserv.lambda.S3toS3</mainClass>
+                                    <mainClass>com.amazonaws.proserv.lambda.KinesisToFirehose</mainClass>
                                 </transformer>
                             </transformers>
                             <artifactSet>

@@ -1,4 +1,4 @@
-The project is for using AWS Lambda with AWS Firehose.
+The project is for using AWS Lambda with AWS Kinesis Firehose.
 
 The project is set up with a generic mvn archetype and the build occurs with Maven.
 
@@ -15,14 +15,12 @@ Package com.amazonaws.proserv.lambda houses the lambda functions
 
 Helper classes are provided:
 com.amazonaws.proserv.PopulateKinesisData
-  - this class is just a helper to put data on to Kinesis.  It uses the SampleAWSCredentialProvider class to inspect for
-    credentials.
+  - this class is just a helper to put data on to Kinesis.  It uses the SampleAWSCredentialProvider class to inspect for credentials.
 com.amazonaws.proserv.SampleAWSCredentialProvider
   - just used to highlight the ease of writing your own...
 
 
 Configs if running locally:
- - resources/AwsCredentials.properties - put your creds here if you are running on your local  NOTE: make sure this file IS NOT EXCLUDED in your Pom.xml if
-   running locally.  It is excluded so as not to be packaged and distributed (a non-no).
+ - resources/AwsCredentials.properties - put your creds here if you are running on your local  NOTE: make sure this file IS NOT EXCLUDED in your Pom.xml if running locally.  It is excluded so as not to be packaged and distributed (a non-no).
 
     

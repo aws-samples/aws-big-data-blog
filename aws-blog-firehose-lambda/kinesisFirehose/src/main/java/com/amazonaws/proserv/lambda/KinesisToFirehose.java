@@ -1,29 +1,28 @@
 package com.amazonaws.proserv.lambda;
 
-import com.amazonaws.proserv.SampleAWSCredentialProvider;
-import com.amazonaws.services.firehose.AmazonFirehoseClient;
-import com.amazonaws.services.firehose.model.*;
+
+import com.amazonaws.services.kinesisfirehose.model.*;
+import com.amazonaws.services.kinesisfirehose.AmazonKinesisFirehoseClient;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.List;
 
 /**
  * Created by dgraeber on 6/18/2015.
  */
 public class KinesisToFirehose {
-    private String firehoseName = "blogfirehose";
     private String firehoseEndpointURL = "https://firehose.us-east-1.amazonaws.com";
-    private String firehoseIAMRole = "firehoseRole";
-    private String targetBucketName = "dgraeberaws-testing";
-    private String targetPrefix = "blogoutput";
+    private String deliveryStreamName = "blogfirehose";
+    private String deliveryStreamRoleARN = "arn:aws:iam::<AWS Acct Id>:role/firehose_blog_role";
+    private String targetBucketARN = "arn:aws:s3::<AWS Acct Id>:dgraeberaws-blogs";
+    private String targetPrefix = "blogoutput/";
     private int intervalInSec = 60;
     private int buffSizeInMB = 2;
 
-    private AmazonFirehoseClient firehoseClient = new AmazonFirehoseClient();
+    private AmazonKinesisFirehoseClient firehoseClient = new AmazonKinesisFirehoseClient();
     private LambdaLogger logger;
 
     public void kinesisHandler(KinesisEvent event, Context context){
@@ -32,12 +31,11 @@ public class KinesisToFirehose {
         for(KinesisEvent.KinesisEventRecord rec : event.getRecords()) {
             logger.log("Got message ");
             String msg = new String(rec.getKinesis().getData().array())+"\n";
-            Record record = new Record()
-                    .withData(ByteBuffer.wrap(msg.getBytes()));
+            Record deliveryStreamRecord = new Record().withData(ByteBuffer.wrap(msg.getBytes()));
 
             PutRecordRequest putRecordRequest = new PutRecordRequest()
-                    .withFirehoseName(firehoseName)
-                    .withRecord(record);
+                    .withDeliveryStreamName(deliveryStreamName)
+                    .withRecord(deliveryStreamRecord);
 
             logger.log("Putting message");
             firehoseClient.putRecord(putRecordRequest);
@@ -46,19 +44,19 @@ public class KinesisToFirehose {
     }
 
     private void setup(){
-        firehoseClient = new AmazonFirehoseClient();
+        firehoseClient = new AmazonKinesisFirehoseClient();
         firehoseClient.setEndpoint(firehoseEndpointURL);
         checkHoseStatus();
     }
 
     private void checkHoseStatus(){
-        DescribeFirehoseRequest describeHoseRequest = new DescribeFirehoseRequest()
-                .withFirehoseName(firehoseName);
-        DescribeFirehoseResult  describeHoseResult = null;
+        DescribeDeliveryStreamRequest describeHoseRequest = new DescribeDeliveryStreamRequest()
+                .withDeliveryStreamName(deliveryStreamName);
+        DescribeDeliveryStreamResult  describeHoseResult = null;
         String status = "UNDEFINED";
         try {
-            describeHoseResult = firehoseClient.describeFirehose(describeHoseRequest);
-            status = describeHoseResult.getFirehoseDescription().getFirehoseStatus();
+            describeHoseResult = firehoseClient.describeDeliveryStream(describeHoseRequest);
+            status = describeHoseResult.getDeliveryStreamDescription().getDeliveryStreamStatus();
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
             logIt("Firehose Not Existent...will create");
@@ -89,19 +87,18 @@ public class KinesisToFirehose {
                 .withSizeInMBs(buffSizeInMB);
 
         S3DestinationConfiguration s3DestConf = new S3DestinationConfiguration()
-                .withBucketName(targetBucketName)
+                .withBucketARN(targetBucketARN)
                 .withCompressionFormat(CompressionFormat.UNCOMPRESSED)
                 .withPrefix(targetPrefix)
-                .withBufferingHints(buffHints);
+                .withBufferingHints(buffHints)
+                .withRoleARN(deliveryStreamRoleARN);
 
-        CreateFirehoseRequest createHoseRequest = new  CreateFirehoseRequest()
-                .withFirehoseName(firehoseName)
+        CreateDeliveryStreamRequest createHoseRequest = new  CreateDeliveryStreamRequest()
+                .withDeliveryStreamName(deliveryStreamName)
                 .withS3DestinationConfiguration(s3DestConf);
 
-        createHoseRequest.setRole(firehoseIAMRole);
-
         logIt("Sending create firehose request");
-        firehoseClient.createFirehose(createHoseRequest);
+        firehoseClient.createDeliveryStream(createHoseRequest);
         try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
@@ -118,19 +115,23 @@ public class KinesisToFirehose {
     }
 
     private void listFirehose(){
-        ListFirehosesRequest listHosesRequest = new ListFirehosesRequest();
-        ListFirehosesResult lhr = firehoseClient.listFirehoses(listHosesRequest);
+        ListDeliveryStreamsRequest listHosesRequest = new ListDeliveryStreamsRequest();
+        ListDeliveryStreamsResult lhr = firehoseClient.listDeliveryStreams(listHosesRequest);
 
-        for(String name:lhr.getFirehoseNames()){
+        for(String name:lhr.getDeliveryStreamNames()){
             logIt(name);
         }
     }
 
 
     private void deleteFirehose(){
-        DeleteFirehoseRequest deleteHoseRequest= new DeleteFirehoseRequest();
-        deleteHoseRequest.setFirehoseName(firehoseName);
-        firehoseClient.deleteFirehose(deleteHoseRequest);
+        deleteFirehose(deliveryStreamName);
+    }
+
+    private void deleteFirehose(String delivStreamName){
+        DeleteDeliveryStreamRequest deleteHoseRequest= new DeleteDeliveryStreamRequest();
+        deleteHoseRequest.setDeliveryStreamName(delivStreamName);
+        firehoseClient.deleteDeliveryStream(deleteHoseRequest);
     }
 
 
@@ -141,7 +142,7 @@ public class KinesisToFirehose {
             Record record = new Record()
                     .withData(ByteBuffer.wrap(message.getBytes()));
             PutRecordRequest putRecordInHoseRequest = new PutRecordRequest()
-                    .withFirehoseName(firehoseName)
+                    .withDeliveryStreamName(deliveryStreamName)
                     .withRecord(record);
 
             PutRecordResult res = firehoseClient.putRecord(putRecordInHoseRequest);
@@ -150,13 +151,13 @@ public class KinesisToFirehose {
     }
 
 
+    //FOR TESTING LOCALLY ONLY
 //    public static void main(String[] args){
-//        KinesisToFirehose kinesisToFirehose = new KinesisToFirehose();
-//
-//        //kinesisToFirehose.checkHoseStatus();
-//        //kinesisToFirehose.listFirehose();
-//        //kinesisToFirehose.setup();
-//        kinesisToFirehose.putSampleMessages();
+        //KinesisToFirehose kinesisToFirehose = new KinesisToFirehose();
+        //kinesisToFirehose.checkHoseStatus();
+        //kinesisToFirehose.listFirehose();
+        //kinesisToFirehose.setup();
+        //kinesisToFirehose.putSampleMessages();
 //    }
 
 
