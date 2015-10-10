@@ -1,4 +1,4 @@
-The project is for using AWS Lambda with AWS Kinesis Firehose.
+The project is for using AWS Lambda with Amazon Kinesis Firehose.
 
 The project is set up with a generic mvn archetype and the build occurs with Maven.
 
