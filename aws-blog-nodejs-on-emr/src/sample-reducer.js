@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // use RL to read lines from stdin
 var readline = require('readline');
 var rl = readline.createInterface({
