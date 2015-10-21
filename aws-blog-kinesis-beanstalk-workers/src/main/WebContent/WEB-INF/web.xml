@@ -8,6 +8,6 @@
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
 	<listener>
-		<listener-class>com.amazon.kinesis.beanstalk.connector.KinesisWorkerServletInitiator</listener-class>
+		<listener-class>com.amazonaws.services.kinesis.beanstalk.connector.KinesisWorkerServletInitiator</listener-class>
 	</listener>
 </web-app>
