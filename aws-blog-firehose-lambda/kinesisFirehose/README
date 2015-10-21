@@ -1,0 +1,26 @@
+The project is for using AWS Lambda with Amazon Kinesis Firehose.
+
+The project is set up with a generic mvn archetype and the build occurs with Maven.
+
+Java 8 is the prescribed JDK to compile to.
+
+Run mvn clean install to create the Lambda jar distribution (Java 8!!!)
+
+Things to look for:
+Package com.amazonaws.proserv.lambda houses the lambda functions
+- at the top of each class in the is package are instance variables.  YOU MUST EDIT these instance variables.  At the time of this writing, there was not a way to pass parameters into Java-based
+  Lambda functions - and since a jar is used there is no need to extract them to propery files (but you very well can).
+
+
+
+Helper classes are provided:
+com.amazonaws.proserv.PopulateKinesisData
+  - this class is just a helper to put data on to Kinesis.  It uses the SampleAWSCredentialProvider class to inspect for credentials.
+com.amazonaws.proserv.SampleAWSCredentialProvider
+  - just used to highlight the ease of writing your own...
+
+
+Configs if running locally:
+ - resources/AwsCredentials.properties - put your creds here if you are running on your local  NOTE: make sure this file IS NOT EXCLUDED in your Pom.xml if running locally.  It is excluded so as not to be packaged and distributed (a non-no).
+
+    

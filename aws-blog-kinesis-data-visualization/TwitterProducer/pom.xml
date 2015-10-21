@@ -82,7 +82,7 @@
 		<dependency>
 			<groupId>com.amazonaws</groupId>
 			<artifactId>amazon-kinesis-client</artifactId>
-			<version>LATEST</version>
+			<version>1.2.0</version>
 		</dependency>
 
 		<!-- Logging with SLF4J & LogBack -->

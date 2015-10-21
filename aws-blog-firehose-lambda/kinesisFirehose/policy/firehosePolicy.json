@@ -1,0 +1,26 @@
+{
+    "Version": "2012-10-17",
+    "Statement":
+        [
+            {
+                "Sid": "StmtDemo1",
+                "Effect": "Allow",
+                "Action":
+                    ["s3:AbortMultipartUpload",
+                        "s3:GetBucketLocation",
+                        "s3:GetObject",
+                        "s3:ListBucket",
+                        "s3:ListBucketMultipartUploads",
+                        "s3:PutObject"
+                    ],
+                "Resource":
+                    ["arn:aws:s3:::*"]
+            },
+            {
+                "Sid": "StmtDemo2",
+                "Effect": "Allow",
+                "Action":  ["kms:Decrypt","kms:Encrypt"],
+                "Resource":  ["*"]
+            }
+        ]
+}
