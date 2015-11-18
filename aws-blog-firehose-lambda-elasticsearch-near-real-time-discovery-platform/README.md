@@ -12,15 +12,15 @@ This is the code repository for code sample used in AWS Big data blog [Building 
 
 ## Overview of Example
 
-### Lambda function
+### AWS Lambda function
 AWS Lambda function (lambda-s3-twitter-to-es-python/lambda_function.py) that is triggered once a new file is created on S3. 
 The function does the following:<br>
-1.	Reads the file content
-2.	Parses the content to JSON format (Elasticsearch stores documents in JSON format)
-3.	Analyzes Twitter data (lambda-s3-twitter-to-es-python/tweet_utils.py):
-	a.	Extracts Twitter mentions (@username) from the tweet text.
-	b.	Extracts sentiment based on emoticons. If there’s no emoticon in the text the function uses [textblob sentiment analysis]
-4.	Loads the data to Elasticsearch (twitter_to_es.py) using [elasticsearch-py library]
+1.	Reads the file content<br>
+2.	Parses the content to JSON format (Elasticsearch stores documents in JSON format)<br>
+3.	Analyzes Twitter data (lambda-s3-twitter-to-es-python/tweet_utils.py):<br>
+	a.	Extracts Twitter mentions (@username) from the tweet text.<br>
+	b.	Extracts sentiment based on emoticons. If there’s no emoticon in the text the function uses [textblob sentiment analysis]<br>
+4.	Loads the data to Elasticsearch (twitter_to_es.py) using [elasticsearch-py library]<br>
 
 
 
