@@ -114,7 +114,7 @@ Please see [Building a Near-Real-Time Discovery Platform] for more details on us
 [Add S3 as the event source]:http://docs.aws.amazon.com/lambda/latest/dg/getting-started-2-integrate-s3events-console.html
 [Node.js]:https://nodejs.org
 [Twitter application]:https://apps.twitter.com/
-[Building a Near-Real-Time Discovery Platform with AWS]:http://aws-blogs-preprod.amazon.com/bigdata/post/Tx1Z6IF7NA8ELQ9/Building-a-Near-Real-Time-Discovery-Platform-with-AWS
+[Building a Near-Real-Time Discovery Platform with AWS]:http://blogs.aws.amazon.com/bigdata/post/Tx1Z6IF7NA8ELQ9/Building-a-Near-Real-Time-Discovery-Platform-with-AWS
 
 
 
