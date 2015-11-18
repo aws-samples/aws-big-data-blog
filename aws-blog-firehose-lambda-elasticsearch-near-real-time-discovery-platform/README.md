@@ -26,7 +26,7 @@ The function does the following:<br>
 
 
 You can download and unzip the deployment package (packages/s3_twitter_to_es.zip), which already includes elasticsearch and textblob modules, or [create a deployment package yourself], and create a Lambda function using the AWS Universal CLI. The function will be triggered once a new file is created on S3. 
-Please replace ``<<MY_BUCKET>>`` and ``<<MY_KEYPAIR>>`` values with your S3 bucket and keypair.
+Please replace ``<<PARAMETER>>`` with your values.
 
 Modify s3_twitter_to_es/config.py by assigning es_host and es_port
 
@@ -36,7 +36,7 @@ cd path/to/s3_twitter_to_es
 zip -r -9 ../s3_twitter_to_es.zip .
 ```
 
-[create IAM Role] and name it <<LAMBDA_EXEC_ROLE>>
+[create IAM Role] and name it ```<<LAMBDA_EXEC_ROLE>>```
 
 create aws lambda function
 ```
