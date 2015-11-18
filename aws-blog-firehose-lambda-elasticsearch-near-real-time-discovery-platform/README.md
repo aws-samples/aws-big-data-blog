@@ -14,7 +14,7 @@ This is the code repository for code sample used in AWS Big data blog [Building 
 
 ### Lambda function
 AWS Lambda function (lambda-s3-twitter-to-es-python/lambda_function.py) that is triggered once a new file is created on S3. 
-The function does the following:
+The function does the following:<br>
 1.	Reads the file content
 2.	Parses the content to JSON format (Elasticsearch stores documents in JSON format)
 3.	Analyzes Twitter data (lambda-s3-twitter-to-es-python/tweet_utils.py):
