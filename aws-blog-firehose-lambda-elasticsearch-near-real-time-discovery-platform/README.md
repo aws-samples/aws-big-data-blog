@@ -25,7 +25,7 @@ The function does the following:<br>
 
 
 
-You can download and unzip the deployment package (packages/xxxx.zip), which already includes elasticsearch and textblob modules, or [create a deployment package yourself], and create a Lambda function using the AWS Universal CLI. The function will be triggered once a new file is created on S3. 
+You can download and unzip the deployment package (packages/s3_twitter_to_es.zip), which already includes elasticsearch and textblob modules, or [create a deployment package yourself], and create a Lambda function using the AWS Universal CLI. The function will be triggered once a new file is created on S3. 
 Please replace ``<<MY_BUCKET>>`` and ``<<MY_KEYPAIR>>`` values with your S3 bucket and keypair.
 
 Modify s3_twitter_to_es/config.py by assigning es_host and es_port
@@ -44,7 +44,7 @@ aws lambda create-function \
 --region <<REGION>> \
 --function-name s3-twitter-to-es-python  \
 --zip-file fileb://path/to/s3_twitter_to_es.zip \
---role arn:aws:iam::<<ACCOUNT_ID>>:role/<<LAMBDA_EXEC_ROLE>>  \
+--role arn:aws:iam::<<ACCOUNT_ID>>:role/<<LAMBDA_EXEC_ROLE>> \
 --handler lambda_function.handler \
 --runtime python2.7 \
 --timeout 120
@@ -73,7 +73,7 @@ Create Firehose IAM Role named “firehose_delivery_role” based on the followi
                 "s3:PutObject"
             ],
             "Resource": [
-                "arn:aws:s3:::<<S3_BUCKET>>"
+                "arn:aws:s3:::```<<S3_BUCKET>>```"
             ]
         }
     ]
@@ -89,14 +89,13 @@ npm install
 
 modify configurations in config.js
 
-•	firehose
-	o	DeliveryStreamName – name your stream. The app will create the delivery stream if it does not exist
-	o	BucketARN: Use <<S3_BUCKET>> that you entered as the event source for the lambda function
-	o	RoleARN: Get your account id from the IAM dashboard users sign-in link (https://Your_AWS_Account_ID.signin.aws.amazon.com/console/). 
-				 Use the Firehose role you created earlier (“firehose_delivery_role”)
-	o	 Prefix: Use <<S3_PREFIX>> that you entered as the event source for the lambda function
-•	twitter – enter your Twitter application keys.
-•	region – your firehose region (e.g.: us-east-1, us-west-2, eu-west-1)
+•	firehose<br>
+&nbsp;&nbsp;o	DeliveryStreamName – name your stream. The app will create the delivery stream if it does not exist<br>
+&nbsp;&nbsp;o	BucketARN: Use <<S3_BUCKET>> that you entered as the event source for the lambda function<br>
+&nbsp;&nbsp;o	RoleARN: Use the Firehose role you created earlier (“firehose_delivery_role”)<br>
+&nbsp;&nbsp;o	 Prefix: Use <<S3_PREFIX>> that you entered as the event source for the lambda function<br>
+•	twitter – enter your Twitter application keys.<br>
+•	region – your firehose region (e.g.: us-east-1, us-west-2, eu-west-1)<br>
 
 run the application
 ```
