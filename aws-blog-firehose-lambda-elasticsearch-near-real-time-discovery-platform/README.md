@@ -29,12 +29,12 @@ You can download and unzip the deployment package (packages/s3_twitter_to_es.zip
 
 Please replace ``<<PARAMETER>>`` with your values.
 
-Modify s3_twitter_to_es/config.py by assigning es_host and es_port
+Modify s3-twitter-to-es-python/config.py by assigning es_host and es_port
 
 Zip your deployment folder
 ```
-cd path/to/s3_twitter_to_es
-zip -r -9 ../s3_twitter_to_es.zip .
+cd path/to/s3-twitter-to-es-python
+zip -r -9 ../s3-twitter-to-es-python.zip .
 ```
 
 [create IAM Role] and name it ```<<LAMBDA_EXEC_ROLE>>```

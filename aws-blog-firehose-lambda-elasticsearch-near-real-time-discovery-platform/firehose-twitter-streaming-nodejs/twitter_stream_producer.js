@@ -38,16 +38,24 @@ function twitterStreamProducer(firehose) {
               return;
             }
             else {
-              log.info(util.format('%s stream is already created! Re-using it.', config.firehose.DeliveryStreamName));
+              var msg = util.format('%s stream is already created! Re-using it.', config.firehose.DeliveryStreamName);
+              console.log(msg);
+              log.info(msg);
             }
           }
           else {
-            log.info(util.format('%s stream does not exist. Created a new stream with that name.', config.firehose.DeliveryStreamName));
+            var msg = util.format('%s stream does not exist. Created a new stream with that name.', config.firehose.DeliveryStreamName);
+            console.log(msg);
+            log.info(msg);
           }
+          // Poll to make sure stream is in ACTIVE state before start pushing data.
+          _waitForStreamToBecomeActive(callback);
         });
       }
       else {
-        log.info(util.format('%s stream is already created! Re-using it.', config.firehose.DeliveryStreamName));
+        var msg = util.format('%s stream is already created! Re-using it.', config.firehose.DeliveryStreamName);
+        console.log(msg);
+        log.info(msg);
       }
 
       // Poll to make sure stream is in ACTIVE state before start pushing data.
@@ -66,7 +74,9 @@ function twitterStreamProducer(firehose) {
           callback(null);
         }
         else {
-          log.info(util.format('Current status of the stream is %s.', data.DeliveryStreamDescription.DeliveryStreamStatus));
+          var msg = util.format('Current status of the stream is %s.', data.DeliveryStreamDescription.DeliveryStreamStatus);
+          console.log(msg);
+          log.info(msg);
           setTimeout(function() {
             _waitForStreamToBecomeActive(callback);
           }, 1000 * config.waitBetweenDescribeCallsInSeconds);
