@@ -26,6 +26,7 @@ The function does the following:<br>
 
 
 You can download and unzip the deployment package (packages/s3_twitter_to_es.zip), which already includes elasticsearch and textblob modules, or [create a deployment package yourself].<br>
+
 Please replace ``<<PARAMETER>>`` with your values.
 
 Modify s3_twitter_to_es/config.py by assigning es_host and es_port
