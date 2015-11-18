@@ -103,7 +103,7 @@ run the application
 node twitter_stream_producer_app
 ```
 
-Please see [Building a Near-Real-Time Discovery Platform] for more details on using Elasticsearch and Kibana as the discovery platform.
+Please see [Building a Near-Real-Time Discovery Platform with AWS] for more details on using Elasticsearch and Kibana as the discovery platform.
 
 
 [AWS Command Line Interface (CLI)]:http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html
