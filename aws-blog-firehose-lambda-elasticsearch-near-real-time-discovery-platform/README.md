@@ -1,4 +1,5 @@
-# Building near real-time discovery platform AWS Lambda, Amazon Kinesis Firehose and Elasticsearch
+# Building near real-time discovery platform
+##with AWS Lambda, Amazon Kinesis Firehose and Elasticsearch
 
 This is the code repository for code sample used in AWS Big data blog [Building a Near-Real-Time Discovery Platform]
 
@@ -17,9 +18,9 @@ AWS Lambda function (lambda-s3-twitter-to-es-python/lambda_function.py) that is 
 The function does the following:<br>
 1.	Reads the file content<br>
 2.	Parses the content to JSON format (Elasticsearch stores documents in JSON format)<br>
-3.	Analyzes Twitter data (lambda-s3-twitter-to-es-python/tweet_utils.py):<br><pre>
-	a.	Extracts Twitter mentions (@username) from the tweet text.<br>
-	b.	Extracts sentiment based on emoticons. If there’s no emoticon in the text the function uses [textblob sentiment analysis]<br><pre>
+3.	Analyzes Twitter data (lambda-s3-twitter-to-es-python/tweet_utils.py):<br>
+nbsp&nbsp&a.	Extracts Twitter mentions (@username) from the tweet text.<br>
+nbsp&nbsp&b.	Extracts sentiment based on emoticons. If there’s no emoticon in the text the function uses [textblob sentiment analysis]<br>
 4.	Loads the data to Elasticsearch (twitter_to_es.py) using [elasticsearch-py library]<br>
 
 
