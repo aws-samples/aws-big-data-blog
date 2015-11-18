@@ -91,9 +91,9 @@ modify configurations in config.js
 
 •	firehose<br>
 &nbsp;&nbsp;o	DeliveryStreamName – name your stream. The app will create the delivery stream if it does not exist<br>
-&nbsp;&nbsp;o	BucketARN: Use <<S3_BUCKET>> that you entered as the event source for the lambda function<br>
+&nbsp;&nbsp;o	BucketARN: Use ```<<S3_BUCKET>>``` that you entered as the event source for the lambda function<br>
 &nbsp;&nbsp;o	RoleARN: Use the Firehose role you created earlier (“firehose_delivery_role”)<br>
-&nbsp;&nbsp;o	 Prefix: Use <<S3_PREFIX>> that you entered as the event source for the lambda function<br>
+&nbsp;&nbsp;o	 Prefix: Use ```<<S3_PREFIX>>``` that you entered as the event source for the lambda function<br>
 •	twitter – enter your Twitter application keys.<br>
 •	region – your firehose region (e.g.: us-east-1, us-west-2, eu-west-1)<br>
 
