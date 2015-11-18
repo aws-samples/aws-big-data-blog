@@ -50,7 +50,7 @@ aws lambda create-function \
 --timeout 120
 ```
 
-Add S3 as the event source to the lambda function with your ```<<S3_BUCKET>>``` and ```<<S3_PREFIX>>```
+[Add S3 as the event source] to the lambda function with your ```<<S3_BUCKET>>``` and ```<<S3_PREFIX>>```
 
 
 
@@ -110,7 +110,7 @@ Please see [Building a Near-Real-Time Discovery Platform] for more details on us
 [elasticsearch-py library]:http://elasticsearch-py.readthedocs.org/en/master/
 [create a deployment package yourself]:http://docs.aws.amazon.com/lambda/latest/dg/lambda-python-how-to-create-deployment-package.html
 [create IAM Role]:http://docs.aws.amazon.com/lambda/latest/dg/walkthrough-s3-events-adminuser-create-test-function-create-execution-role.html
-[Add S3 as the event source to the lambda function]:http://docs.aws.amazon.com/lambda/latest/dg/getting-started-2-integrate-s3events-console.html
+[Add S3 as the event source]:http://docs.aws.amazon.com/lambda/latest/dg/getting-started-2-integrate-s3events-console.html
 [Node.js]:https://nodejs.org
 [Twitter application]:https://apps.twitter.com/
 
