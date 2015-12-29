@@ -68,7 +68,7 @@ def main():
         if partcount != int(math.ceil(float(size)/partsize)):
             campanile.status("Can't calculate partsize for %s/%s\n" %
                     (args.src, name))
-            ## Send an alert?
+            ## Add alert
             continue
 
         if args.dry_run:

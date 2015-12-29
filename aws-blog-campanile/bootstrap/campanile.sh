@@ -98,7 +98,7 @@ calling_format = boto.s3.connection.OrdinaryCallingFormat
 EOF
 
 ## Set default campanile config 
-cat <<EOF | sudo tee /etc/capanile.cfg 1>/dev/null 
+cat <<EOF | sudo tee /etc/campanile.cfg 1>/dev/null 
 [DEFAULT]
 maxtmpsize=134217728
 $mnts

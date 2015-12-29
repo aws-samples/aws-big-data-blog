@@ -1,8 +1,8 @@
-# Campanile; Turning EMR into a Massive S3 Processing Engine 
+# Campanile; Turning EMR into a Massive S3 Processing Engine
 
 ## Introduction 
 
-Have you ever had to copy S3 data from one account to another? Or list all objects greater then a certain size? How about map a function over a large number of objects? In a classical sense, this use to require only simple shell commands. i.e `aws s3 ls s3://bucket | awk '{ if($3 > 1024000) print $0 }'`. But now with S3 object counts in the billions, these patterns no longer apply. For example, how long would it take to list 1 billion objects, with a process listing 1000 objects/sec? **11 days!** EMR to the rescue. 
+Have you ever had to copy S3 data from one account to another? Or list all objects greater then a certain size? How about map a function over a large number of objects? In a classical sense, this use to require only simple shell commands. i.e `aws s3 ls s3://bucket | awk '{ if($3 > 1024000) print $0 }'`. But now with object counts in the billions, these patterns no longer apply. For example, how long would it take to list 1 billion objects, with a process listing 1000 objects/sec? **11 days!** EMR to the rescue. 
 
 This article will transform an EMR cluster into a highly scalable, highly parallel, S3 processing engine. It examines the Campanile framework, which uses standard building blocks like Hadoop, Streaming, HIVE, and Python Boto to process S3 data at speeds in excess of 100Gbps and/or 10k transactions per second. All examples make use of the [AWS CLI](http://aws.amazon.com/cli), shell commands, and will require at basic understanding of EMR, S3, and IAM. 
 
@@ -10,7 +10,7 @@ This article will transform an EMR cluster into a highly scalable, highly parall
 
 ## Streaming Overview 
 
-EMR's [Hadoop Streaming](http://hadoop.apache.org/docs/stable/hadoop-streaming/HadoopStreaming.html) is the core component of Campanile. Mapper and reducer functions, operate entirely on [standard streams](https://en.wikipedia.org/wiki/Standard_streams), making it extremely easy to integrate scripting languages like python. STDOUT is used for passing data between mappers, reducers, and HDFS/S3, while STDERR is used as control messaging. Below you will fine two examples of how Campanile uses control messaging. Each streaming step creates a _sandboxed_ environment for the mapper and reducers tasks, setting environment variables and copying files (passed in with the -files option) into an temporary location. Campanile provides a number of functions and patterns to support the sandbox.  
+EMR's [Hadoop Streaming](http://docs.aws.amazon.com/ElasticMapReduce/latest/ReleaseGuide/UseCase_Streaming.html) is the core component of Campanile. Mapper and reducer functions, operate entirely on [standard streams](https://en.wikipedia.org/wiki/Standard_streams), making it extremely easy to integrate scripting languages like python. STDOUT is used for passing data between mappers, reducers, and HDFS/S3, while STDERR is used as control messaging. Below you will fine two examples of how Campanile uses control messaging. Each streaming step creates a _sandboxed_ environment for the mapper and reducers tasks, setting environment variables and copying files (passed in with the -files option) into an temporary location. Campanile provides a number of functions and patterns to support the sandbox.  
 
 ### Counters 
 
@@ -59,7 +59,7 @@ GETing or PUTing a large objects can easily exceed default timeouts. Using boto'
 
 ### Sandbox
 
-While shared libraries and conf files are a perfect use case for [bootstrap actions](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-bootstrap.html), during development it's much easier to pass updated functions for each step. To support this functionality, each mapper/reducer will add the _sandbox_ to the *PATH*, before loading shared libraries and boto.config.  
+While shared libraries and configuration files are a perfect use case for [bootstrap actions](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-bootstrap.html), during development it can be much easier to update functions on each invocation. Streaming steps use the -files option, to load files from S3/HDFS into the sandbox environment. In the mapper code, you see the _sandbox_ is added to *PATH*, and the local directory is configuration file search paths.
 
     ## Support for Streaming sandbox env
     sys.path.append(os.environ.get('PWD'))
@@ -73,6 +73,9 @@ While shared libraries and conf files are a perfect use case for [bootstrap acti
     ]
     c = ConfigParser.SafeConfigParser()
     c.read(cfgfiles)
+
+
+### Input Split 
 
 Campanile relies heavily on the [NLineInputFormat](https://hadoop.apache.org/docs/r2.4.1/api/org/apache/hadoop/mapred/lib/NLineInputFormat.html) property, which controls how many lines of input are sent to each mapper task. For example, an objectcopy step is only successful if ALL objects passed to it are copied successfully. Therefore, limiting the number of objects for a single process can drastically increase probability of success. To support this "split", while also supporting campanile functioning in a normal shell, one is needs a "Streaming Environment" check. 
 
@@ -102,8 +105,10 @@ account2 | Destination AWS account owner
 srcbucket | Bucket containing source data, owned by account1
 codebucket | Bucket containing source code, also owned by account1
 dstbucket | Empty bucket, owned by account2
+jeff | Boto profile of IAM User of source account
+jassy | Boto profile of IAM User of destination account
 
-To simply command line examples, set the following env variables. All actions will take place in AWS_DEFAULT_REGION
+To simply command line examples, set the following env variables. All actions will take place in AWS_DEFAULT_REGION. A empty file has been provided [here](etc/blog-cmds). Fill out he file accordingly, and `source etc/blog-cmds`. 
 
 	## Set default region
 	export AWS_DEFAULT_REGION=us-west-2
@@ -196,6 +201,22 @@ The CloudFormation template [s3_migration_user](cloudformation/s3_migration_user
 
 A _PartFile_ in delimiter,prefix format, describes the S3 bucket layout with no overlap. An example file has been provided [here](var/input/srcbucket/part.all), that maps to the set of testfiles. In this case, only *one* object maps to each `<delimeter>,<prefix>` entry, but in the real world it could be millions per line. One could also image splitting the part file up further, part.000, part.001, etc..., and processing across multiple clusters concurrently. 
 
+The testfile 000/00 was included to clarify why delimiters are useful. Using the _s3api_, lets go over an example. 
+
+	$ aws s3api list-objects --prefix 00 --bucket $SRC_BUCKET --profile $SRC_PROFILE --query 'Contents[*].[Key,ETag,Size,LastModified]' --output text
+	00	"be78ac18165af5cf456453eb3f37ec9a"	10240	2015-12-24T05:26:19.000Z
+	000/00	"e5f8e641007332dda1c6cae118f7749c-3"	20971520	2015-12-24T05:35:21.000Z
+
+	## How could break this into two list calls?
+
+	## List 00* in the root, using delimiter 
+	$ aws s3api list-objects --delimiter / --prefix 00 --bucket $SRC_BUCKET --profile $SRC_PROFILE --query 'Contents[*].[Key,ETag,Size,LastModified]' --output text
+	00	"be78ac18165af5cf456453eb3f37ec9a"	10240	2015-12-24T05:26:19.000Z
+
+	## List 000/*
+	aws s3api list-objects --prefix 000/ --bucket $SRC_BUCKET --profile $SRC_PROFILE --query 'Contents[*].[Key,ETag,Size,LastModified]' --output text
+	000/00	"e5f8e641007332dda1c6cae118f7749c-3"	20971520	2015-12-24T05:35:21.000Z
+
 ### Source Files
 
 Finally, it is time to copy all files into the code bucket! 
@@ -224,7 +245,11 @@ Finally, it is time to copy all files into the code bucket!
 
 ## Steps 
 
-To determine the proper S3 endpoint, refer to [http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region](). The following tests are executed locally, and use PIPEs to simulate streaming IO. Once commands are verified, we can launch in EMR. 
+To determine the correct S3 endpoint, refer to [http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region](). The following tests are executed locally, and use PIPEs to simulate streaming IO. Once commands are verified, we can launch in EMR. 
+
+**NOTE:** Send _stderr_ to _/dev/null_ to hide status messages: i.e. `2>/dev/null`
+
+![](img/workflow.png)
 
 ### BucketList 
 
@@ -234,6 +259,8 @@ The first step is a distributed list, which is only possible because of S3's lex
     $ head -n 1 ../var/input/srcbucket/part.all | ./bucketlist.py --bucket $SRC_BUCKET --endpoint $SRC_ENDPOINT --profile $SRC_PROFILE
     00	be78ac18165af5cf456453eb3f37ec9a	10240	2015-12-24 05:26:19
 	reporter:counter:srcbucket,Bytes,10240
+
+![](img/bucketlist.png)
 
 ### Hive Diff
 
@@ -250,7 +277,7 @@ In some occasions, it is useful to diff two buckets before starting a copy. This
 
 ### MultipartList
 
-MultiPartList corresponds to the API request [UploadInitiate](http://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadInitiate.html). Although, it's most difficult task, is calculating the part size of source objects that were uploaded with MultiPart. Review the details of multipart uploads [here](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html), and understand how etags are calculated based on part size(s). In these examples, Campanile uses a function similar to that of the AWS CLI to calculate part size. And since this article assumes the testfiles were uploaded using the cli, multipartlist will be able to get the correct partsize. 
+MultiPartList corresponds to the API request [UploadInitiate](http://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadInitiate.html). Although, it's most difficult task is calculating the part maps of source objects that were uploaded with MultiPart. Review the details of multipart uploads [here](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html), and understand how etags are calculated based on part size(s). In these examples, Campanile uses a function similar to that of the AWS CLI to calculate part size. And since this article assumes the testfiles were uploaded using the cli, multipartlist will be able to determine the correct partsize. 
 
 **NOTE:** The only way to copy an object and keep the same etag, is to know the original partsize(s) of the initial upload. 
 
@@ -288,7 +315,9 @@ MultiPartList corresponds to the API request [UploadInitiate](http://docs.aws.am
 
 From the output, you see that the 20M object 000/00 has been broken into 3 parts. 
 
-**NOTE:** NULL or None is represented as \N for HIVE support 
+**NOTE:** NULL or None is represented as _\N_ for better HIVE integration
+
+![](img/multipartlist.png)
 
 ### ObjectCopy 
 
@@ -315,9 +344,10 @@ The only reducer of the bunch, is responsible for sorting parts, and issuing the
 
     $ head -n 2 ../var/input/srcbucket/part.all | ./bucketlist.py --bucket $SRC_BUCKET --endpoint $SRC_ENDPOINT --profile $SRC_PROFILE | ./multipartlist.py --src-bucket $SRC_BUCKET --src-endpoint $SRC_ENDPOINT --src-profile $SRC_PROFILE --dst-bucket $DST_BUCKET --dst-endpoint $DST_ENDPOINT --dst-profile $DST_PROFILE | ./objectcopy.py --src-bucket $SRC_BUCKET --src-endpoint $SRC_ENDPOINT --src-profile $SRC_PROFILE --dst-bucket $DST_BUCKET --dst-endpoint $DST_ENDPOINT --dst-profile $DST_PROFILE | ./multipartcomplete.py --bucket $DST_BUCKET --endpoint $DST_ENDPOINT --profile $DST_PROFILE
     ...
-    dstbucket/000/00	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	96995b58d4cbf6aaa9041b4f00c7f6ae	1	0	8388607
-	dstbucket/000/00	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	96995b58d4cbf6aaa9041b4f00c7f6ae	2	8388608	16777215
-	dstbucket/000/00	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	a0448946c0d68b0268940e5f519cba18	3	16777216	20971519
+    dstbucket/000/00	e5f8e641007332dda1c6cae118f7749c-3	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	96995b58d4cbf6aaa9041b4f00c7f6ae	1	0	8388607
+	dstbucket/000/00	e5f8e641007332dda1c6cae118f7749c-3	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	96995b58d4cbf6aaa9041b4f00c7f6ae	2	8388608	16777215
+	dstbucket/000/00	e5f8e641007332dda1c6cae118f7749c-3	7TiS9GhL59.Ej19ACMh.HDIvu4bbTvnsQNbA.mo4GfiR4vGjiZ2u7RvhTxLokXSBf3c5xREkFHorhgz9E6jluQ.B3msqQSyoKh3Ynar8QlMW8EmbosIf0oWgIRvTmr.J	a0448946c0d68b0268940e5f519cba18	3	16777216	20971519
+
 
 	## Compare source and destination objects
 	$ head -n 2 ../var/input/srcbucket/part.all | ./bucketlist.py --bucket $SRC_BUCKET --endpoint $SRC_ENDPOINT --profile $SRC_PROFILE 2>/dev/null
@@ -328,5 +358,20 @@ The only reducer of the bunch, is responsible for sorting parts, and issuing the
 	00	be78ac18165af5cf456453eb3f37ec9a	10240	2015-12-24 17:55:07
 	000/00	e5f8e641007332dda1c6cae118f7749c-3	20971520	2015-12-24 17:55:06
 
+![](img/objectcopy.png)
+
 ## Launch EMR
+
+We've tested the permissions and uploaded all source file into the _codebucket_. This command launches the Processing Cluster, using default EMR Roles, Subnets, and Security Groups. 
+
+	## Update <keyname> accordingly
+	$ aws emr create-cluster --release-label emr-4.2.0 --name S3ProcessingEngine --tags Name=Campanile --ec2-attributes KeyName=<keyname> --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.2xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge --use-default-roles --enable-debugging --applications Name=HIVE --bootstrap-actions Path=s3://$CODE_BUCKET/bootstrap/campanile.sh,Name=campanile --log-uri s3://$CODE_BUCKET/log/jobflow/
+    {
+    	"ClusterId": "j-Z3TU7ESI7LPA"
+	}
+
+
+
+
+
 

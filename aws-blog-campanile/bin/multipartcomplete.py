@@ -4,6 +4,8 @@ import argparse
 import fileinput
 import os
 import sys
+from random import randint
+from time import sleep
 
 ## Support for Streaming sandbox env
 sys.path.append(os.environ.get('PWD'))
@@ -12,11 +14,13 @@ os.environ["BOTO_PATH"] = '/etc/boto.cfg:~/.boto:./.boto'
 import campanile
 import boto
 from boto.s3.connection import S3Connection
-from boto.utils import parse_ts
 
 # -----------------------------------------------------------------------------
 # Functions
 # -----------------------------------------------------------------------------
+def random_sleep(maxsleep=5):
+    sleep(randint(0,maxsleep))
+
 def parts_to_xml(parts):
     s = '<CompleteMultipartUpload>\n'
     for part in sorted(parts, key=lambda x: x.part_number):
@@ -51,16 +55,16 @@ def main():
     
     ## Process input
     for line in fileinput.input("-"):
-        key['name'], key['mid'], etag, part, startbyte, stopbyte = \
-                line.rstrip('\n').split('\t')[0:]
+        key['name'], key['etag'], key['mid'], part_etag, part, startbyte, \
+                stopbyte = line.rstrip('\n').split('\t')[0:]
         
         ## Print to save partmap 
-        print "%s/%s" % (args.bucket, line.rstrip('\n'))
+        print "%s" % line.rstrip('\n')
 
         ## Part object
         mpart = boto.s3.multipart.Part()
         mpart.part_number = int(part)
-        mpart.etag = etag
+        mpart.etag = part_etag
         mpart.size = int(stopbyte) - int(startbyte)
 
         if key['name'] == current_key['name']:
@@ -70,23 +74,27 @@ def main():
 
         if mparts:
             if args.dry_run:
-                print "Complete %s/%s:%s\n%s" % (args.bucket, \
-                        current_key['name'], current_key['mid'], \
-                        parts_to_xml(mparts))
+                print "Complete %s:%s\n%s" % (current_key['name'], 
+                        current_key['mid'],parts_to_xml(mparts))
             else:
                 ## Added retry because partlist hard to recreate
                 retry = 3
                 while True:
                     try:
-                        bucket.complete_multipart_upload(current_key['name'],\
-                                current_key['mid'],parts_to_xml(mparts))
+                        result = bucket.complete_multipart_upload(\
+                                current_key['name'], current_key['mid'],
+                                parts_to_xml(mparts))
+                        if current_key['etag'] != \
+                                result.etag.replace("\"", ""):
+                            ## Add alert; Maybe wrong partsize
+                            pass
                         campanile.status("%s:OK" % current_key['mid'])
                         break
                     except Exception, e:
                         if retry == 0:
                             raise
                         retry -= 1
-                        
+                        random_sleep()
                         ## Lets try a new bucket connection 
                         bucket = S3Connection(suppress_consec_slashes=False,
                             host=endpoint,is_secure=True,
@@ -99,23 +107,26 @@ def main():
     ## Complete upload
     if mparts:
         if args.dry_run:
-            print "Complete %s/%s:%s\n%s" % (args.bucket, \
-                        current_key['name'], current_key['mid'], \
-                        parts_to_xml(mparts))
+            print "Complete %s:%s\n%s" % (current_key['name'], 
+                    current_key['mid'],parts_to_xml(mparts))
         else:
             ## Added retry because partlist hard to recreate
             retry = 3 
             while True:
                 try:
-                    bucket.complete_multipart_upload(current_key['name'],\
-                            current_key['mid'],parts_to_xml(mparts))
+                    result = bucket.complete_multipart_upload(\
+                            current_key['name'], current_key['mid'],
+                            parts_to_xml(mparts))
+                    if current_key['etag'] != result.etag.replace("\"", ""):
+                        ## Add alert; Maybe wrong partsize
+                        pass
                     campanile.status("%s:OK" % current_key['mid'])
                     break
                 except Exception, e:
                     if retry == 0:
                         raise
                     retry -= 1
-                        
+                    random_sleep()
                     ## Lets try a new bucket connection 
                     bucket = S3Connection(suppress_consec_slashes=False,
                         host=endpoint,is_secure=True,

@@ -75,8 +75,8 @@ def main():
 
     start_index = campanile.stream_index()
     for line in fileinput.input("-"):
-        name, etag, size, mtime, mid, part, partcount, startbyte, \
-                stopbyte = line.rstrip('\n').split('\t')[start_index:]
+        name, etag, size, mtime, mid, part, partcount, startbyte, stopbyte \
+                = line.rstrip('\n').split('\t')[start_index:]
         
         srckey = src_bucket.get_key(name, validate=False)
         dstkey = dst_bucket.get_key(name, validate=False)
@@ -132,13 +132,14 @@ def main():
                 newetag = mpart.etag.replace("\"","")
 
             if newetag != srckey.md5:
+                ## Add alert
                 raise Exception("Something bad happened for %s. \
                         Expecting %s md5, but got %s" % \
                         (report_name, srckey.md5, newetag))
 
             if mid != campanile.NULL:
-                print "%s\t%s\t%s\t%s\t%s\t%s" % \
-                        (name, mid, newetag, part, startbyte, stopbyte)
+                print "%s\t%s\t%s\t%s\t%s\t%s\t%s" % \
+                        (name, etag, mid, newetag, part, startbyte, stopbyte)
             
             campanile.counter(args.dst, "InputBytes", expected_size)
             campanile.status("%s/%s:OK" % (args.dst,report_name))
