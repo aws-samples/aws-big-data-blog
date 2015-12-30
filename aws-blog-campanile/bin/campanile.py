@@ -39,6 +39,9 @@ class FileProgress:
 # -----------------------------------------------------------------------------
 # Functions
 # -----------------------------------------------------------------------------
+def random_sleep(maxsleep=5):
+    sleep(randint(0,maxsleep))
+
 def cli_chunksize(size, current_chunksize=DEFAULTS['multipart_chunksize']):
     chunksize = current_chunksize
     num_parts = int(math.ceil(size / float(chunksize)))

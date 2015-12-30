@@ -18,9 +18,6 @@ from boto.s3.connection import S3Connection
 # -----------------------------------------------------------------------------
 # Functions
 # -----------------------------------------------------------------------------
-def random_sleep(maxsleep=5):
-    sleep(randint(0,maxsleep))
-
 def parts_to_xml(parts):
     s = '<CompleteMultipartUpload>\n'
     for part in sorted(parts, key=lambda x: x.part_number):
@@ -94,7 +91,7 @@ def main():
                         if retry == 0:
                             raise
                         retry -= 1
-                        random_sleep()
+                        campanile.random_sleep()
                         ## Lets try a new bucket connection 
                         bucket = S3Connection(suppress_consec_slashes=False,
                             host=endpoint,is_secure=True,
@@ -126,7 +123,7 @@ def main():
                     if retry == 0:
                         raise
                     retry -= 1
-                    random_sleep()
+                    campanile.random_sleep()
                     ## Lets try a new bucket connection 
                     bucket = S3Connection(suppress_consec_slashes=False,
                         host=endpoint,is_secure=True,

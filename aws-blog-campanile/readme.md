@@ -1,4 +1,5 @@
-# Campanile; Turning EMR into a Massive S3 Processing Engine
+
+![](img/title.png "Campanile; Turning EMR into a Massive S3 Processing Engine")
 
 ## Introduction 
 
@@ -79,6 +80,8 @@ While shared libraries and configuration files are a perfect use case for [boots
 
 Campanile relies heavily on the [NLineInputFormat](https://hadoop.apache.org/docs/r2.4.1/api/org/apache/hadoop/mapred/lib/NLineInputFormat.html) property, which controls how many lines of input are sent to each mapper task. For example, an objectcopy step is only successful if ALL objects passed to it are copied successfully. Therefore, limiting the number of objects for a single process can drastically increase probability of success. To support this "split", while also supporting campanile functioning in a normal shell, one is needs a "Streaming Environment" check. 
 
+**NOTE:** Another extremely important property of this function, is this controls how often a S3 connection object is re-established. At the end of the split, another process, and therefore a new connection to S3 is made. S3 has hundreds, if not thousands of endpoints, and the only way to achieve distribution is to utilize the entire fleet. (Get link to article detailing this)
+
     ## campanile.py provides and index function  
     def stream_index():
     try:
@@ -93,6 +96,22 @@ Campanile relies heavily on the [NLineInputFormat](https://hadoop.apache.org/doc
     for line in fileinput.input("-"):
         record = line.rstrip('\n').split('\t')[start_index:]
    
+
+### MapReduce Configuration(s)
+
+While MapReduce options can be set for an entire cluster([http://docs.aws.amazon.com/ElasticMapReduce/latest/API/EmrConfigurations.html]()), it can be useful to fine tune them on a step by step basis. Referencing the [rsync.py](bin/rsync.py) EMR wrapper, the table below offers some insight into why certain values were set for specific tasks. Depending on the _emr-release-label_, check hadoop version and see all configuration options here: `https://hadoop.apache.org/docs/r<hadoop-version>/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml` 
+
+Name | Description
+--- | --- 
+mapreduce.map.maxattempts | While the default value is fine (4 in Hadoop 2.6.0), it's a good options to have. 
+mapreduce.task.timeout | The number of milliseconds before a task will be terminated if it neither reads an input, writes an output, nor updates its status string. For steps like _BucketList_, or _MultipartList_, where we expect rapid output, this value can be small then _ObjectCopy_, where a mapper's copy throughput can be small and need a longer time. 
+mapreduce.map.speculative | Set to **false** for all Campanile steps. Copying the same object at the same time, can cause issues. 
+mapreduce.input.lineinputformat.linespermap | Discussed above, this defined how much of the Input each mapper process will see. For _BucketList_, that can be long running, this value should be generally 1. For _MultiPartList_, which is only a single [HeadObject](http://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectHEAD.html) for objects uploaded via multipart_, chances of failure of very low and therefore this can be much higher. 
+org.apache.hadoop.mapred.lib.NLineInputFormat | Set as an input format when using mapreduce.input.lineinputformat.linespermap
+mapreduce.job.reduces | Only set in the _ObjectCopy_ step, because it's the only step that requires a reducer. This also controls the number of output files are written. In this example, where a single output file is easier to manage, this is set to 1. This can have an ill effect on reliability of the job to finish successfully, but reducer failures are rare in this case.
+mapreduce.output.fileoutputformat.compress | Text is highly compressible, so this is generally set to true
+mapreduce.output.fileoutputformat.compress.codec | org.apache.hadoop.io.compress.GzipCodec is always a good choice. Output is not in .gz format, and can be un-ziped with gzip utilities. 
+
 
 ## Setup
 
@@ -166,7 +185,10 @@ Untar and copy testfiles into source bucket.
 
 ### IAM Users 
 
-The CloudFormation template [s3_migration_user](cloudformation/s3_migration_user.json) has been provided to create IAM users for the migration, which follows best practice ["least privileged access"](http://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege). One might ask, why not use the EMR instance role that has access to s3:*? Concurrent running mapper tasks quickly overload the local http server, causing permissions errors when the SDK attempts to get temp keys. Therefore, as a part of Hadoop Streaming process, a .boto file containing credentials is loaded into sandbox environment. See creation of this file below. 
+The CloudFormation template [s3_migration_user](cloudformation/s3_migration_user.json) has been provided to create IAM users for the migration, which follows best practice ["least privileged access"](http://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege). One might ask, why not use the EMR instance role that has access to s3:*? Concurrent running mapper tasks quickly overload the local http server, causing permissions errors when the SDK attempts to get temp keys. Therefore, Campanile lets mappers and reducer tasks use .boto file loaded into sandbox environment. See creation of this file below.
+
+**NOTE:** Streaming Steps Input, Output, and -files directives, still rely on instance roles.
+
 
     ## Create Source ReadOnly User 
     $ aws cloudformation create-stack --stack-name s3-read-test --template-body file://s3_migration_user.json --parameters ParameterKey=Bucket,ParameterValue=$SRC_BUCKET ParameterKey=Operation,ParameterValue=Read --capabilities CAPABILITY_IAM --profile $ADMIN_ACCOUNT1
@@ -261,6 +283,7 @@ The first step is a distributed list, which is only possible because of S3's lex
 	reporter:counter:srcbucket,Bytes,10240
 
 ![](img/bucketlist.png)
+
 
 ### Hive Diff
 
@@ -364,11 +387,15 @@ The only reducer of the bunch, is responsible for sorting parts, and issuing the
 
 We've tested the permissions and uploaded all source file into the _codebucket_. This command launches the Processing Cluster, using default EMR Roles, Subnets, and Security Groups. 
 
+**NOTE:** _MultipartComplete_ writes a compressed partmap of every copied multipart object to Hadoop's _output_ location. If this resides in an S3 bucket that requires SSE, then one must add `--emrfs Encryption=ServerSide` to the emr launch command. 
+
+
 	## Update <keyname> accordingly
-	$ aws emr create-cluster --release-label emr-4.2.0 --name S3ProcessingEngine --tags Name=Campanile --ec2-attributes KeyName=<keyname> --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.2xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge --use-default-roles --enable-debugging --applications Name=HIVE --bootstrap-actions Path=s3://$CODE_BUCKET/bootstrap/campanile.sh,Name=campanile --log-uri s3://$CODE_BUCKET/log/jobflow/
+	$ aws emr create-cluster --release-label emr-4.2.0 --name S3ProcessingEngine --tags Name=Campanile --ec2-attributes KeyName=<keyname> --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.2xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge --use-default-roles --enable-debugging --applications Name=HIVE --bootstrap-actions Path=s3://$CODE_BUCKET/bootstrap/campanile.sh,Name=campanile --log-uri s3://$CODE_BUCKET/log/jobflow/ --emrfs Encryption=ServerSide
     {
     	"ClusterId": "j-Z3TU7ESI7LPA"
 	}
+
 
 
 
