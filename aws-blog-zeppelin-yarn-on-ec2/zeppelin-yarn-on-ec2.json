@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property><name>yarn.web-proxy.address</name><value>ip-172-31-29-88.us-west-1.compute.internal:20888</value></property>
+<property><name>yarn.resourcemanager.resource-tracker.address</name><value>ip-172-31-29-88.us-west-1.compute.internal:8025</value></property>
+<property><name>yarn.resourcemanager.address</name><value>ip-172-31-29-88.us-west-1.compute.internal:8032</value></property>
+<property><name>yarn.resourcemanager.scheduler.address</name><value>ip-172-31-29-88.us-west-1.compute.internal:8030</value></property>
+<property><name>yarn.nodemanager.aux-services</name>
+<property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle,</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+  <property><name>yarn.log-aggregation-enable</name><value>false</value></property>
+
+  <property>
+    <name>yarn.dispatcher.exit-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.local-dirs</name>
+    <value>/mnt/yarn,/mnt1/yarn</value>
+    <final>true</final>
+  </property>
+
+  <property>
+    <description>Where to store container logs.</description>
+    <name>yarn.nodemanager.log-dirs</name>
+    <value>/var/log/hadoop-yarn/containers</value>
+  </property>
+
+  <property>
+    <description>Where to aggregate logs to.</description>
+    <name>yarn.nodemanager.remote-app-log-dir</name>
+    <value>/var/log/hadoop-yarn/apps</value>
+  </property>
+
+  <property>
+    <description>Classpath for typical applications.</description>
+     <name>yarn.application.classpath</name>
+     <value>
+        $HADOOP_CONF_DIR,
+        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,
+        $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
+        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
+        $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
+        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
+        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,
+        /usr/lib/hadoop-lzo/lib/*,
+        /usr/share/aws/emr/emrfs/conf,
+        /usr/share/aws/emr/emrfs/lib/*,
+        /usr/share/aws/emr/emrfs/auxlib/*,
+        /usr/share/aws/emr/lib/*,
+        /usr/share/aws/emr/ddb/lib/emr-ddb-hadoop.jar,
+        /usr/share/aws/emr/goodies/lib/emr-hadoop-goodies.jar,
+        /usr/share/aws/emr/kinesis/lib/emr-kinesis-hadoop.jar,
+        /usr/lib/spark/yarn/lib/datanucleus-api-jdo.jar,
+        /usr/lib/spark/yarn/lib/datanucleus-core.jar,
+        /usr/lib/spark/yarn/lib/datanucleus-rdbms.jar,
+        /usr/share/aws/emr/cloudwatch-sink/lib/*
+     </value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.address</name>
+    <value>${yarn.nodemanager.hostname}:8041</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.increment-allocation-mb</name>
+    <value>32</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.client.thread-count</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>8</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.resource-tracker.client.thread-count</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.container-manager.thread-count</name>
+    <value>64</value>
+   <name>yarn.nodemanager.container-manager.thread-count</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.scheduler.client.thread-count</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>11520</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.localizer.client.thread-count</name>
+    <value>20</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.localizer.fetch.thread-count</name>
+    <value>20</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>11520</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.vmem-pmem-ratio</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>172.31.29.88</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.minimum-allocation-mb</name>
+    <value>256</value>
+  </property>
+
+  <property>
+    <name>yarn.label.enabled</name>
+  <property>
+    <name>yarn.label.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.app.mapreduce.am.labels</name>
+    <value>CORE</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.labels</name>
+    <value>MASTER</value>
+  </property>
+</configuration>
+
