@@ -142,7 +142,7 @@
               }
             },
              "sources": {
-							"/home/ec2-user/prereqs/": "http://d3kbcqa49mib13.cloudfront.net/spark-1.5.2-bin-hadoop2.6.tgz"
+							"/home/ec2-user/prereqs/": "http://aws-bigdata-blog.s3.amazonaws.com/artifacts/spark-1.5.2-bin-hadoop2.6.tgz"
 							},
               "commands" : {
               "01-install-git" : {
