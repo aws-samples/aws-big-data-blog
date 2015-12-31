@@ -4,8 +4,6 @@ import argparse
 import fileinput
 import os
 import sys
-from random import randint
-from time import sleep
 
 ## Support for Streaming sandbox env
 sys.path.append(os.environ.get('PWD'))
@@ -44,14 +42,11 @@ def main():
             host=args.endpoint,is_secure=True,
             profile_name=args.profile).get_bucket(args.bucket)
 
-    ## Counters
-    filcount = 0
     current_key  = { 'name' : None }
-    key = { 'name' : None }
     mparts = []
-    
     ## Process input
     for line in fileinput.input("-"):
+        key = {}
         key['name'], key['etag'], key['mid'], part_etag, part, startbyte, \
                 stopbyte = line.rstrip('\n').split('\t')[0:]
         
@@ -91,10 +86,11 @@ def main():
                         if retry == 0:
                             raise
                         retry -= 1
+                        campanile.status("%s:FAIL" % current_key['mid'])
                         campanile.random_sleep()
                         ## Lets try a new bucket connection 
                         bucket = S3Connection(suppress_consec_slashes=False,
-                            host=endpoint,is_secure=True,
+                            host=args.endpoint,is_secure=True,
                             profile_name=args.profile).get_bucket(args.bucket)
 
         mparts = []
@@ -123,10 +119,11 @@ def main():
                     if retry == 0:
                         raise
                     retry -= 1
+                    campanile.status("%s:FAIL" % current_key['mid'])
                     campanile.random_sleep()
                     ## Lets try a new bucket connection 
                     bucket = S3Connection(suppress_consec_slashes=False,
-                        host=endpoint,is_secure=True,
+                        host=args.endpoint,is_secure=True,
                         profile_name=args.profile).get_bucket(args.bucket)
 
 # -----------------------------------------------------------------------------

@@ -99,7 +99,7 @@ def main():
         for i in range(partcount):
             offset = partsize * i
             bytes = min(partsize, int(size) - offset)
-            print line.replace('\n','\t') + "%s\t%s\t%s\t%s\t%s" % (mid, 
+            print '\t'.join(record) + "\t%s\t%s\t%s\t%s\t%s" % (mid, 
                     (i+1), partcount, offset, (offset + bytes - 1))
 
 

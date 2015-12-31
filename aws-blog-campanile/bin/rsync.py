@@ -46,6 +46,7 @@ DEFAULT_AWS_SEC = 'default'
 def bucketlist(name, files, cmd, input, output, lines=1,
         debug=False, timeout=300000):
     stepargs = [
+        'hadoop-streaming',
         '-files', files,
         '-D', 'mapreduce.map.maxattempts=4',
         '-D', 'mapreduce.input.lineinputformat.linespermap=%i' % lines,
@@ -62,23 +63,28 @@ def bucketlist(name, files, cmd, input, output, lines=1,
             action_on_failure='CANCEL_AND_WAIT',
             input=input,
             output=output,
-            step_args = stepargs)
+            step_args = stepargs,
+            jar="command-runner.jar")
 
 def hive(name, hivefile, src, dst, diff):
-    step = emr.step.HiveStep(name,
-        hivefile,
-        hive_args = [
-            '-d', 'SRC=%s' % src,
-            '-d', 'DST=%s' % dst,
-            '-d', 'DIFF=%s' % diff
-        ]
-    )
-    step.action_on_failure = 'CANCEL_AND_WAIT'
-    return step
+    stepargs = [ 
+        'hive-script', 
+        '--run-hive-script',
+        '--args',
+        '-f', hivefile, 
+        '-d', 'SRC=%s' % src,
+        '-d', 'DST=%s' % dst,
+        '-d', 'DIFF=%s' % diff
+    ]
+    return boto.emr.step.JarStep(name, 
+        jar="command-runner.jar", 
+        action_on_failure='CANCEL_AND_WAIT',
+        step_args= stepargs)
 
 def multipartlist(name, files, cmd, input, output, lines=1000,
         debug=False, timeout=300000):
     stepargs = [
+        'hadoop-streaming',
         '-files', files,
         '-D', 'mapreduce.map.maxattempts=4',
         '-D', 'mapreduce.input.lineinputformat.linespermap=%i' % lines,
@@ -95,11 +101,14 @@ def multipartlist(name, files, cmd, input, output, lines=1000,
             action_on_failure='CANCEL_AND_WAIT',
             input=input,
             output=output,
-            step_args = stepargs)
+            step_args = stepargs,
+            jar="command-runner.jar"
+            )
 
 def objectcopy(name, files, cmd, input, output, rcmd,
         lines=10, debug=False, timeout=600000):
     stepargs = [
+        'hadoop-streaming',
         '-files', files,
         '-D', 'mapreduce.map.maxattempts=6',
         '-D', 'mapreduce.task.timeout=%i' % timeout,
@@ -120,7 +129,8 @@ def objectcopy(name, files, cmd, input, output, rcmd,
             action_on_failure='CANCEL_AND_WAIT',
             input=input,
             output=output,
-            step_args=stepargs)
+            step_args=stepargs,
+            jar="command-runner.jar")
 
 def bucket_endpoint(conn, name):
     try: 
@@ -135,21 +145,13 @@ def bucket_endpoint(conn, name):
         return "s3-%s.amazonaws.com" % location
 
 def cluster_id(string):
-    if re.match("^j-[A-Z0-9]{12}$",string):
+    if re.match("^j-[A-Z0-9]+$",string):
         return string
     else:
         raise argparse.ArgumentTypeError("Invalid cluster id format")
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src-bucket', required=True, dest='src',
-            help='Source S3 bucket')
-    parser.add_argument('--dst-bucket', required=True, dest='dst',
-            help='Destination S3 bucket')
-    parser.add_argument('--src-profile', 
-            help='Boto profile used for source connection')
-    parser.add_argument('--dst-profile', 
-            help='Boto profile used for destination connection')
     parser.add_argument('--job','-j', required=True, type=cluster_id,
             help='Job Id')
     parser.add_argument('--input', required=True,
@@ -158,24 +160,32 @@ def main():
             help='Code path')
     parser.add_argument('--output', required=True,
             help='Output path')
-    parser.add_argument('--uuid',
-            help='Set uuid instead of generate it')
-    parser.add_argument('--region', 
-            help='Override default region')
-    parser.add_argument('--profile', 
-            help='Profile to use for emr connection')
+    parser.add_argument('--src-bucket', required=True, dest='src',
+            help='Source S3 bucket')
+    parser.add_argument('--dst-bucket', required=True, dest='dst',
+            help='Destination S3 bucket')
+    parser.add_argument('--src-profile', 
+            help='Boto profile used for source connection')
+    parser.add_argument('--dst-profile', 
+            help='Boto profile used for destination connection')
     parser.add_argument('--dry-run', action="store_true",
             help='Do everything but execute steps')
-    parser.add_argument('--verbose', '-v', action="store_true",
-            help='Log to console')
-    parser.add_argument('--debug', '-d', action="store_true",
-            help='Enable debug logging')
     parser.add_argument('--diff', action="store_true",
             help='Run diff before copy')
     parser.add_argument('--no-copy', action="store_true",
             help='Do everything but copy')
     parser.add_argument('--list-only', action="store_true",
             help='Run list step only')
+    parser.add_argument('--uuid',
+            help='Set uuid instead of generating it')
+    parser.add_argument('--region', 
+            help='Override default region for emr connection')
+    parser.add_argument('--profile', 
+            help='Profile to use for emr connection')
+    parser.add_argument('--verbose', '-v', action="store_true",
+            help='Log to console')
+    parser.add_argument('--debug', '-d', action="store_true",
+            help='Enable debug logging')
     args = parser.parse_args()
 
     ## Set region if defined, otherwise fallback on profile
@@ -195,7 +205,7 @@ def main():
         uuid = int(time())
 
     rundir = "/%s" % uuid
-    print "RunDir: %s" % rundir
+    print "RunDir: hdfs://%s" % rundir
 
     ## Setup logging 
     logger = logging.getLogger('rsync')
@@ -328,7 +338,7 @@ def main():
             profile_name=args.profile).add_jobflow_steps(args.job, jobsteps)
 
     for i in response.stepids:
-        print "Added step %s" % i.value 
+        print "Added step %s" % i.value
 
 # -----------------------------------------------------------------------------
 #  Main
