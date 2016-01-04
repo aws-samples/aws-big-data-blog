@@ -339,9 +339,4 @@
   }
 }
 
-  <property>
-    <name>yarn.nodemanager.labels</name>
-    <value>MASTER</value>
-  </property>
-</configuration>
 
