@@ -16,7 +16,7 @@
       "Description" : "Zeppelin EC2 instance type",
       "Type" : "String",
       "Default" : "m3.xlarge",
-      "AllowedValues" : [ "t1.micro", "t2.micro", "t2.small", "t2.medium", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "g2.2xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "AllowedValues" : [ "t2.small", "t2.medium", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "g2.2xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
       "ConstraintDescription" : "Must be a valid EC2 instance type"
     },
      "EMRMasterSecurityGroup": {
@@ -34,6 +34,11 @@
       "Type": "String",
       "Default":"mybucket/hadoopconf"
         },
+      "S3HiveConfFolder": {
+      "Description" : "S3 bucket and folder which contains your hive conf directory",
+      "Type": "String",
+      "Default":"mybucket/hiveconf"
+        },
     "ZeppelinSubnetId": {
       "Description" : "Choose a subnet to launch your Zeppelin Instance",
       "Type": "AWS::EC2::Subnet::Id"
@@ -41,6 +46,15 @@
     "ZeppelinVPCId": {
       "Description" : "Choose a VPC to launch your Zeppelin Instance",
       "Type": "AWS::EC2::VPC::Id"
+    },
+    "ZeppelinAccessLocation" : {
+      "Description" : "The IP address range that can be used to access Zeppelin on port 8080",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x"
     },
     "SSHLocation" : {
       "Description" : "The IP address range that can be used to SSH to the EC2 instances",
@@ -55,8 +69,6 @@
   
   "Mappings" : {
     "AWSInstanceType2Arch" : {
-      "t1.micro"    : { "Arch" : "PV64"   },
-      "t2.micro"    : { "Arch" : "HVM64"  },
       "t2.small"    : { "Arch" : "HVM64"  },
       "t2.medium"   : { "Arch" : "HVM64"  },
       "m1.small"    : { "Arch" : "PV64"   },
@@ -157,9 +169,12 @@
              "command" : "sed -i s/\\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo",       
               "ignoreErrors" : "true"
                 }, 
-                
               "04-download_hadoopconf" : {
               "command" : { "Fn::Join" : ["", ["aws s3 sync s3://", { "Ref" : "S3HadoopConfFolder" }, " ", "/home/ec2-user/hadoopconf"]]},
+              "ignoreErrors" : "true"                           
+              },               
+              "05-download_hive-site.xml" : {
+              "command" : { "Fn::Join" : ["", ["aws s3 cp s3://", { "Ref" : "S3HiveConfFolder" },"/hive-site.xml", " ", "/home/ec2-user/zeppelin/conf/hive-site.xml"]]},
               "ignoreErrors" : "true"                           
               } 
              },  
@@ -207,19 +222,19 @@
             
             "files" : {
             "/home/ec2-user/prereqs/spark-1.5.2-bin-hadoop2.6/conf/spark-env.sh": {
-            "source" : "https://github.com/awslabs/aws-big-data-blog/blob/master/aws-blog/zeppelin-yarn-on-ec2/conf/spark-env.sh",
+            "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/conf/spark-env.sh",
             "mode": "000644",
             "owner" : "root",
             "group" : "root"
             },
              "/home/ec2-user/zeppelin/conf/zeppelin-env.sh": {
-             "source" : "https://github.com/awslabs/aws-big-data-blog/blob/master/aws-blog/zeppelin-yarn-on-ec2/conf/zeppelin-env.sh",
+             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/conf/zeppelin-env.sh",
              "mode": "000644",
             "owner" : "root",
             "group" : "root"
              },
              "/home/ec2-user/zeppelin/conf/zeppelin-site.xml": {
-             "source" : "https://github.com/awslabs/aws-big-data-blog/blob/master/aws-blog/zeppelin-yarn-on-ec2/conf/zeppelin-site.xml",
+             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/conf/zeppelin-site.xml",
              "mode": "000644",
             "owner" : "root",
             "group" : "root"
@@ -322,7 +337,7 @@
         "GroupDescription" : "Enable access to Zeppelin over port 8080, access to EMR cluster through EMRMaster and EMRSlave Security Groups",
         "VpcId" : { "Ref" : "ZeppelinVPCId" },
         "SecurityGroupIngress" : [
-          {"IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "CidrIp" : { "Ref" : "ZeppelinAccessLocation"}},
           {"IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "EMRMasterSecurityGroup"}},
           {"IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "EMRSlaveSecurityGroup"}},
           {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
@@ -338,10 +353,3 @@
     }
   }
 }
-
-  <property>
-    <name>yarn.nodemanager.labels</name>
-    <value>MASTER</value>
-  </property>
-</configuration>
-

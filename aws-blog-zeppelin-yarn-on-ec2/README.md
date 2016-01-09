@@ -1,5 +1,5 @@
 # Setting up Apache Zeppelin on EC2 as a YARN client#
-This is the code repository for samples used the AWS Big Data blog Taking Flight with Apache Zeppelin on EC2 as an EMR Yarn Client
+This is the code repository for samples used the AWS Big Data blog [Running an External Zeppelin Instance using S3 Backed Notebooks with Spark on Amazon EMR](http://blogs.aws.amazon.com/bigdata/post/Tx2HJD3Z74J2U8U/Running-an-External-Zeppelin-Instance-using-S3-Backed-Notebooks-with-Spark-on-Am)
 
 ###Overview of Example###
 
