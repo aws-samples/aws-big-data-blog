@@ -1,0 +1,864 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Agile Analytics with Amazon Redshift",
+  "Parameters": {
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    },
+    "DevVpcCidr": {
+      "Description": "CIDR Block for Developer VPC",
+      "Type": "String",
+      "Default": "10.1.0.0/16",
+      "AllowedValues": [
+        "10.1.0.0/16"
+      ]
+    },
+    "DevPublicSubnetCidr": {
+      "Description": "Dev Environment Public Subnet",
+      "Type": "String",
+      "Default": "10.1.0.0/24"
+    },
+    "DevPrivateSubnetCidr": {
+      "Description": "Dev Environment Private Subnet",
+      "Type": "String",
+      "Default": "10.1.2.0/24"
+    }
+  },
+  "Mappings": {
+    "AmazonLinuxAMI": {
+      "us-east-1": {
+        "AMI": "ami-1ecae776"
+      },
+      "us-west-1": {
+        "AMI": "ami-d114f295"
+      },
+      "us-west-2": {
+        "AMI": "ami-e7527ed7"
+      },
+      "eu-west-1": {
+        "AMI": "ami-a10897d6"
+      },
+      "eu-central-1": {
+        "AMI": "ami-a8221fb5"
+      },
+      "sa-east-1": {
+        "AMI": "ami-b52890a8"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-68d8e93a"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-fd9cecc7"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-cbf90ecb"
+      }
+    }
+  },
+  "Resources": {
+    "DevVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {
+          "Ref": "DevVpcCidr"
+        },
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "Tags": [
+          {
+            "Key": "VPC",
+            "Value": "Dev VPC"
+          },
+          {
+            "Key": "Name",
+            "Value": "Dev VPC"
+          }
+        ]
+      }
+    },
+    "DevInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "DependsOn": "DevVpc"
+    },
+    "DevAttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "DependsOn": [
+        "DevVpc",
+        "DevInternetGateway"
+      ],
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "DevInternetGateway"
+        }
+      }
+    },
+    "DevPublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "CidrBlock": {
+          "Ref": "DevPublicSubnetCidr"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            "0",
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Dev Public Subnet"
+          }
+        ]
+      }
+    },
+    "DevPublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "DependsOn": [
+        "DevVpc",
+        "DevAttachGateway"
+      ],
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Dev Public Route Table"
+          }
+        ]
+      }
+    },
+    "DevPublicRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": [
+        "DevPublicRouteTable",
+        "DevAttachGateway"
+      ],
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "DevPublicRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "DevInternetGateway"
+        }
+      }
+    },
+    "DevPublicSubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": [
+        "DevPublicRouteTable",
+        "DevPublicSubnet",
+        "DevAttachGateway"
+      ],
+      "Properties": {
+        "SubnetId": {
+          "Ref": "DevPublicSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "DevPublicRouteTable"
+        }
+      }
+    },
+    "DevPrivateSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "CidrBlock": {
+          "Ref": "DevPrivateSubnetCidr"
+        },
+        "AvailabilityZone": {
+          "Fn::Select": [
+            "0",
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Dev Private Subnet"
+          },
+          {
+            "Key": "Environment",
+            "Value": "Development"
+          }
+        ]
+      }
+    },
+    "DevPrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Dev Private Route Table"
+          },
+          {
+            "Key": "Environment",
+            "Value": "Development"
+          }
+        ]
+      }
+    },
+    "DevPrivateSubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": [
+        "DevPublicRouteTable",
+        "DevPrivateSubnet",
+        "DevAttachGateway"
+      ],
+      "Properties": {
+        "SubnetId": {
+          "Ref": "DevPrivateSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "DevPrivateRouteTable"
+        }
+      }
+    },
+    "DevPrivateNetworkAcl": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Network",
+            "Value": "Dev Private NACL"
+          },
+          {
+            "Key": "Environment",
+            "Value": "Development"
+          }
+        ]
+      }
+    },
+    "NatInstanceWaitHandle": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle",
+      "Properties": {}
+    },
+    "NatInstanceWaitCondition": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "DependsOn": "DevNatInstance",
+      "Properties": {
+        "Handle": {
+          "Ref": "NatInstanceWaitHandle"
+        },
+        "Timeout": "1800"
+      }
+    },
+    "DevNatInstance": {
+      "Type": "AWS::EC2::Instance",
+      "DependsOn": [
+        "DevAttachGateway",
+        "DevPublicRoute",
+        "DevPublicSubnet"
+      ],
+      "Properties": {
+        "ImageId": {
+          "Fn::FindInMap": [
+            "AmazonLinuxAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": "t2.small",
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "AssociatePublicIpAddress": "true",
+            "SubnetId": {
+              "Ref": "DevPublicSubnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "DevNatSecurityGroup"
+              }
+            ]
+          }
+        ],
+        "SourceDestCheck": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "NAT (Dev VPC)"
+          },
+          {
+            "Key": "Environment",
+            "Value": "Development"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -ex\n",
+                "yum -y update\n",
+                "echo 1 > /proc/sys/net/ipv4/ip_forward\n",
+                "echo 0 > /proc/sys/net/ipv4/conf/eth0/send_redirects\n",
+                "/sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE\n",
+                "/sbin/iptables-save > /etc/sysconfig/iptables\n",
+                "mkdir -p /etc/sysctl.d/\n",
+                "cat << NatConfFileMarker > /etc/sysctl.d/nat.conf\n",
+                "net.ipv4.ip_forward = 1\n",
+                "net.ipv4.conf.eth0.send_redirects = 0\n",
+                "NatConfFileMarker\n\n",
+                "/opt/aws/bin/cfn-signal -s true '",
+                {
+                  "Ref": "NatInstanceWaitHandle"
+                },
+                "'\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "DevNatSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "GroupDescription": "Enable internal access to the NAT device",
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "0",
+            "ToPort": "1024",
+            "CidrIp": {
+              "Ref": "DevPrivateSubnetCidr"
+            }
+          },
+          {
+            "IpProtocol": "udp",
+            "FromPort": "0",
+            "ToPort": "1024",
+            "CidrIp": {
+              "Ref": "DevPrivateSubnetCidr"
+            }
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "udp",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "DevPrivateRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": [
+        "DevNatInstance",
+        "DevPrivateRouteTable"
+      ],
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "DevPrivateRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId": {
+          "Ref": "DevNatInstance"
+        }
+      }
+    },
+    "ArtifactBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        }
+      }
+    },
+    "CIInstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": [
+        "DevAttachGateway",
+        "DevJenkinsSecurityGroup"
+      ],
+      "Properties": {
+        "GroupDescription": "Security Group for Continuous Integration Instance",
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "CIInstanceSecurityGroup"
+          },
+          {
+            "Key": "DeploymentType",
+            "Value": "Development"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "udp",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8080",
+            "SourceSecurityGroupId": {
+              "Ref": "DevJenkinsSecurityGroup"
+            }
+          }
+        ]
+      }
+    },
+    "CIInstanceEC2InstanceProfile": {
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "CIInstanceEC2TrustAccessRole"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
+    },
+    "CIInstanceEC2TrustAccessRole": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        },
+        "Path": "/"
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    "CIInstancePolicy": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "ec2:*",
+                "logs:*",
+                "cloudformation:*",
+                "s3:*",
+                "iam:PassRole",
+                "iam:ListInstanceProfiles",
+                "iam:UploadSSHPublicKey",
+                "codepipeline:AcknowledgeJob",
+                "codepipeline:GetJobDetails",
+                "codepipeline:PollForJobs",
+                "codepipeline:PutJobFailureResult",
+                "codepipeline:PutJobSuccessResult"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ]
+        },
+        "PolicyName": "CIInstance_RestrictedAccess",
+        "Roles": [
+          {
+            "Ref": "CIInstanceEC2TrustAccessRole"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Policy"
+    },
+    "CIInstanceWaitHandle01": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle",
+      "Properties": {}
+    },
+    "CIInstanceWaitCondition01": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "DependsOn": "CIInstance",
+      "Properties": {
+        "Handle": {
+          "Ref": "CIInstanceWaitHandle01"
+        },
+        "Timeout": "1800"
+      }
+    },
+    "CIUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AWSCodeCommitPowerUser"
+        ]
+      }
+    },
+    "CIInstance": {
+      "Type": "AWS::EC2::Instance",
+      "DependsOn": [
+        "DevPublicSubnet",
+        "CIUser",
+        "CIInstanceSecurityGroup",
+        "DevAttachGateway"
+      ],
+      "Properties": {
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "IamInstanceProfile": {
+          "Ref": "CIInstanceEC2InstanceProfile"
+        },
+        "ImageId": {
+          "Fn::FindInMap": [
+            "AmazonLinuxAMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "InstanceType": "t2.small",
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "AssociatePublicIpAddress": "true",
+            "SubnetId": {
+              "Ref": "DevPublicSubnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "CIInstanceSecurityGroup"
+              }
+            ]
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "CI-Instance"
+          },
+          {
+            "Key": "DeploymentType",
+            "Value": "Development"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -x\n",
+                "yum update -y\n",
+                "#Install Git, Apache Bench, PostgreSQL, PHP, and CloudWatch Logs\n",
+                "yum install -y git httpd-tools awslogs postgresql php\n",
+                "sleep 30\n",
+                "#Set up environment variables\n",
+                "export REGION=",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "export AMI_ID=",
+                {
+                  "Fn::FindInMap": [
+                    "AmazonLinuxAMI",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "AMI"
+                  ]
+                },
+                "\n",
+                "export SG_ID=",
+                {
+                  "Ref": "CIInstanceSecurityGroup"
+                },
+                "\n",
+                "export SUBNET_ID=",
+                {
+                  "Ref": "DevPublicSubnet"
+                },
+                "\n",
+                "export KEYNAME=",
+                {
+                  "Ref": "KeyName"
+                },
+                "\n",
+                "mkdir /home/ec2-user/setup\n",
+                "#####################################################################################################################\n",
+                "# Update sudoers file to not require a TTY for sudo.\n",
+                "sed -i 's/^Defaults    requiretty/#&/' /etc/sudoers\n",
+                "mkdir /home/ec2-user/.aws \n",
+                "cat > /home/ec2-user/.aws/config <<EOF\n",
+                "[default]\n",
+                "region = ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "EOF\n",
+                "chown -R ec2-user:ec2-user /home/ec2-user/.aws\n",
+                "#Installing Jenkins \n",
+                "wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo\n",
+                "rpm --import http://pkg.jenkins-ci.org/redhat-stable/jenkins-ci.org.key\n",
+                "sleep 5 && yum install -y jenkins\n",
+                "chkconfig jenkins on\n",
+                "# Download CodePipeline plugin and Cloudformation plugin (prior to starting Jenkins Service)\n",
+                "mkdir /var/lib/jenkins/plugins && chown -R jenkins:jenkins /var/lib/jenkins\n",
+                "wget -O /var/lib/jenkins/plugins/aws-codepipeline-plugin-for-jenkins.hpi http://updates.jenkins-ci.org/latest/aws-codepipeline.hpi\n",
+                "wget -O /var/lib/jenkins/plugins/jenkins-cloudformation-plugin.hpi http://updates.jenkins-ci.org/latest/jenkins-cloudformation-plugin.hpi\n",
+                "# Start jenkins, pause for a few, then install remaining plugins\n",
+                "service jenkins start && sleep 30\n",
+                "# Generate SSH key for Jenkins - CodeCommit integration\n",
+                "ssh-keygen -b 2048 -t rsa -f /home/ec2-user/.ssh/id_rsa -q -N '' && chown -R ec2-user:ec2-user /home/ec2-user\n",
+                "mkdir /var/lib/jenkins/.ssh && cp /home/ec2-user/.ssh/id_rsa /var/lib/jenkins/.ssh/id_rsa\n",
+                "ciUserName=",
+                {
+                  "Ref": "CIUser"
+                },
+                "\n",
+                "ciPubKeyId=$(aws iam upload-ssh-public-key --user-name $ciUserName --ssh-public-key-body file:///home/ec2-user/.ssh/id_rsa.pub --query 'SSHPublicKey.SSHPublicKeyId')\n",
+                "# setup ssh config file for AWS CodeCommit\n",
+                "echo \"Host git-codecommit.*.amazonaws.com\" >> /var/lib/jenkins/.ssh/config\n",
+                "echo \"  User $ciPubKeyId\" >> /var/lib/jenkins/.ssh/config\n",
+                "echo \"  IdentityFile /var/lib/jenkins/.ssh/id_rsa\" >> /var/lib/jenkins/.ssh/config\n",
+                "echo \"  StrictHostKeyChecking no\" >> /var/lib/jenkins/.ssh/config\n",
+                "sudo chown -R jenkins:jenkins /var/lib/jenkins/.ssh/\n",
+                "# Jenkins: Install plugs and set up environment\n",
+                "cd /var/lib/jenkins && wget http://localhost:8080/jnlpJars/jenkins-cli.jar && mkdir tmp\n",
+                "echo \"export KEYNAME=$KEYNAME\" >> /var/lib/jenkins/.env_config\n",
+                "echo \"export REGION=$REGION\" >> /var/lib/jenkins/.env_config\n",
+                "chown -R jenkins:jenkins /var/lib/jenkins\n",
+                "java -jar jenkins-cli.jar -s http://localhost:8080 install-plugin git git-client s3 awseb-deployment-plugin codedeploy -deploy -restart && sleep 30\n",
+                "# All is well so signal success\n",
+                "/opt/aws/bin/cfn-signal -s true '",
+                {
+                  "Ref": "CIInstanceWaitHandle01"
+                },
+                "'\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "DevJenkinsSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": "DevAttachGateway",
+      "Properties": {
+        "GroupDescription": "Security Group for Jenkinks ELB",
+        "VpcId": {
+          "Ref": "DevVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "DevJenkinsSecurityGroup"
+          },
+          {
+            "Key": "Environment",
+            "Value": "Development"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "DevWebAppLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn": "CIInstance",
+      "Properties": {
+        "Listeners": [
+          {
+            "LoadBalancerPort": "80",
+            "InstancePort": "8080",
+            "Protocol": "HTTP"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "DevJenkinsSecurityGroup"
+          }
+        ],
+        "Subnets": [
+          {
+            "Ref": "DevPublicSubnet"
+          }
+        ],
+        "Instances": [
+          {
+            "Ref": "CIInstance"
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:8080/login",
+          "HealthyThreshold": "3",
+          "UnhealthyThreshold": "5",
+          "Interval": "30",
+          "Timeout": "5"
+        }
+      }
+    },
+    "CodePipeLineRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "codepipeline.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Path": "/",
+        "Policies": [ {
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Version" : "2012-10-17",
+            "Statement": [
+              {
+                "Action": [
+                  "s3:GetObject",
+                  "s3:GetObjectVersion",
+                  "s3:GetBucketVersioning"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+              },
+              {
+                "Action": [
+                  "s3:PutObject"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::codepipeline*",
+                  "arn:aws:s3:::elasticbeanstalk*"
+                ],
+                "Effect": "Allow"
+              },
+              {
+                "Action": [
+                  "codedeploy:CreateDeployment",
+                  "codedeploy:GetApplicationRevision",
+                  "codedeploy:GetDeployment",
+                  "codedeploy:GetDeploymentConfig",
+                  "codedeploy:RegisterApplicationRevision"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+              },
+              {
+                "Action": [
+                  "elasticbeanstalk:*",
+                  "ec2:*",
+                  "elasticloadbalancing:*",
+                  "autoscaling:*",
+                  "cloudwatch:*",
+                  "s3:*",
+                  "sns:*",
+                  "cloudformation:*",
+                  "rds:*",
+                  "sqs:*",
+                  "ecs:*",
+                  "iam:PassRole"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+              },
+              {
+                "Action": [
+                  "lambda:InvokeFunction",
+                  "lambda:ListFunctions"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+              }
+            ]
+          }
+        } ]
+      }
+    }
+  },
+  "Outputs": {
+    "JenkinsEndpoint": {
+      "Description" : "Endpoint used to connect to the Jenkins Server",
+      "Value":  { "Fn::GetAtt": [ "DevWebAppLoadBalancer", "DNSName" ] }
+    },
+    "CodePipeLineARN": {
+      "Description" : "ARN of the CodePipeline Service Role",
+      "Value":  {"Fn::GetAtt" : ["CodePipeLineRole", "Arn"] }
+    }
+  }
+}

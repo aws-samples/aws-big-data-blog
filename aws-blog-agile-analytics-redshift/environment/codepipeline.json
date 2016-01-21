@@ -1,0 +1,110 @@
+{
+    "pipeline": {
+        "roleArn": "< role arn >", 
+        "stages": [
+            {
+                "name": "Source", 
+                "actions": [
+                    {
+                        "inputArtifacts": [], 
+                        "name": "Source", 
+                        "actionTypeId": {
+                            "category": "Source", 
+                            "owner": "AWS", 
+                            "version": "1", 
+                            "provider": "S3"
+                        }, 
+                        "outputArtifacts": [
+                            {
+                                "name": "MyApp"
+                            }
+                        ], 
+                        "configuration": {
+                            "S3Bucket": "< S3 artefact bucket >", 
+                            "S3ObjectKey": "deploy.zip"
+                        }, 
+                        "runOrder": 1
+                    }
+                ]
+            }, 
+            {
+                "name": "AutomatedTest", 
+                "actions": [
+                    {
+                        "inputArtifacts": [
+                         	{
+                            	"name": "MyApp"
+                        	}
+                        ], 
+                        "name": "AutomatedTestJenkins", 
+                        "actionTypeId": {
+                            "category": "Test", 
+                            "owner": "Custom", 
+                            "version": "1", 
+                            "provider": "JenkinsCustomAction"
+                        }, 
+                        "outputArtifacts": [], 
+                        "configuration": {
+                            "ProjectName": "AutomatedTest"
+                        }, 
+                        "runOrder": 1
+                    }
+                ]
+            }, 
+            {
+                "name": "PreProduction", 
+                "actions": [
+                    {
+                        "inputArtifacts": [
+                         	{
+                            	"name": "MyApp"
+                        	}
+                        ], 
+                        "name": "PreProdJenkins", 
+                        "actionTypeId": {
+                            "category": "Test", 
+                            "owner": "Custom", 
+                            "version": "1", 
+                            "provider": "JenkinsCustomAction"
+                        }, 
+                        "outputArtifacts": [], 
+                        "configuration": {
+                            "ProjectName": "PreProdDeploy"
+                        }, 
+                        "runOrder": 1
+                    }
+                ]
+            }, 
+            {
+                "name": "Production", 
+                "actions": [
+                    {
+                        "inputArtifacts": [
+                         	{
+                            	"name": "MyApp"
+                        	}
+                        ],
+                        "name": "ProdDeploy", 
+                        "actionTypeId": {
+                            "category": "Test", 
+                            "owner": "Custom", 
+                            "version": "1", 
+                            "provider": "JenkinsCustomAction"
+                        }, 
+                        "outputArtifacts": [], 
+                        "configuration": {
+                            "ProjectName": "ProdDeploy"
+                        }, 
+                        "runOrder": 1
+                    }
+                ]
+            }
+        ], 
+        "artifactStore": {
+            "type": "S3", 
+            "location": "< S3 CodePipeline Bucket >"
+        }, 
+        "name": "RedshiftAgileAnalytics", 
+        "version": 1
+    }
+}
