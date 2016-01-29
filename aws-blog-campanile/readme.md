@@ -3,15 +3,31 @@
 
 ## Introduction 
 
-Have you ever had to copy S3 data from one account to another? Or list all objects greater then a certain size? How about map a function over a large number of objects? In a classical sense, this use to be simple shell command. i.e `aws s3 ls s3://bucket | awk '{ if($3 > 1024000) print $0 }'`. But now with object counts in the billions, these patterns no longer apply. For example, how long would it take to list 1 billion objects, with a process listing 1000 objects/sec? **11 days!** EMR to the rescue. 
+Have you ever had to copy a huge Amazon S3 bucket to another account or region? Or create a list based on object name or size? How about mapping a function over millions of objects? [Amazon EMR](https://aws.amazon.com/elasticmapreduce/) to the rescue! EMR allows you to deploy large managed clusters, tightly coupled with S3, transforming the problem from a single, unscalable process/instance to one of orchestration. 
 
-This article will transform an EMR cluster into a highly scalable, highly parallel, S3 processing engine. It examines the Campanile framework, which uses standard building blocks like Hadoop, Streaming, HIVE, and Python Boto to process S3 data at speeds in excess of 100Gbps and/or 10k transactions per second. All examples make use of the [AWS CLI](http://aws.amazon.com/cli), shell commands, and will require at basic understanding of EMR, S3, and IAM. 
+The Campanile framework is a collection of scripts and patterns that use standard building blocks like Hadoop MapReduce, Streaming, HIVE, and Python Boto. Customers have used Campanile to migrate petabytes of data from one account to another, run periodic sync jobs and large Amazon Glacier restores, enable SSE, create indexes, and sync data before enabling CRR. 
 
-**NOTE:** There are hard-coded parameters throughout the code, which go against the API driven nature of AWS. This is done by design. When processing billions of objects, a single extra API request can quickly become a performance and cost inhibitor. 
+Traditionally, you could perform these tasks with simple shell commands: `aws s3 ls s3://bucket | awk '{ if($3 > 1024000) print $0 }'`. More recently, you could use complex threaded applications, having single processes make hundreds of requests a second. Now, with object counts reaching the billions, these patterns no longer realistically scale. For example, how long would it take you to list a billion objects with a process listing 1000 objects/sec? 11 days without interruption. 
+
+This post examines how the Campanile framework can be used to implement a bucket copy at speeds in excess of 100 Gbps or tens of thousands of transactions per second. Campanile also helps streamline the deployment of EMR, by providing a number of bootstrap actions that install system dependencies like Boto, write instance-type specific configuration files, and provide additional useful development and reporting tools like SaltStack and Syslog. 
+
+
+**NOTE:** There are a number of hard-coded parameters throughout the examples, which go against the API driven nature of AWS. This is a deliberate design optimization. When processing billions of objects, a single extra API request can quickly become a performance and cost inhibitor.
+
+## Requirments 
+
+All code samples and documentation be found [AWS BigData Blog Repo](https://github.com/awslabs/aws-big-data-blog). Step one is to download or clone the repo locically. Python modules dependencies can then be installed using pip, and the included [requirements](./etc/requirements.txt) file. 
+
+    $ git clone https://github.com/awslabs/aws-big-data-blog.git
+    $ cd aws-big-data-blog/aws-blog-campanile
+
+    ## Use pip-2.7 if system has multiple versions of pip
+    $ pip install -r ./etc/requirements.txt -U
+
 
 ## Streaming Overview 
 
-EMR's [Hadoop Streaming](http://docs.aws.amazon.com/ElasticMapReduce/latest/ReleaseGuide/UseCase_Streaming.html) makes up the core of Campanile. Mapper and reduce functions operate entirely on [standard streams](https://en.wikipedia.org/wiki/Standard_streams), making it extremely easy to integrate scripting languages like python. STDOUT is used for passing data between mappers, reducers, and HDFS/S3, while STDERR is used for control messaging (below you will fine two examples of this). Each streaming step creates a _sandboxed_ environment, setting environment variables and copying files (passed in with the -files option) into an temporary location. Campanile provides a number of functions and patterns to help support the Hadoop Streaming sandbox.  
+Campanile Mapper and Reducer functions use [Hadoop Streaming](http://docs.aws.amazon.com/ElasticMapReduce/latest/ReleaseGuide/UseCase_Streaming.html) to operate entirely on [standard streams](https://en.wikipedia.org/wiki/Standard_streams), making it easy to integrate scripting languages like python. STDOUT is used for passing data between mappers, reducers, and HDFS/S3, while STDERR is used for control messaging (below you will fine two examples of this). Each streaming step creates a _sandboxed_ environment, setting environment variables and copying files (passed in with the -files option) into a temporary location. Campanile provides a number of functions and patterns to help support the Hadoop Streaming sandbox.  
 
 ### Counters 
 
@@ -27,6 +43,19 @@ For example, BucketList uses this function to count the size of all objects in b
 
     ## bucketlist.py 
     campanile.counter(args.bucket, "Bytes", key.size)
+
+    ## See step syslog on master node for counter output(s)
+    $ ssh hadoop@<master-public-hostname> "tail /var/log/hadoop/steps/<step-id>/syslog"
+            Physical memory (bytes) snapshot=4647555072
+            Virtual memory (bytes) snapshot=31281672192
+            Total committed heap usage (bytes)=5704253440
+        <args.bucket>
+            Bytes=55045264
+        File Input Format Counters 
+            Bytes Read=482
+        File Output Format Counters 
+            Bytes Written=16144
+    2016-01-07 22:39:01,902 INFO org.apache.hadoop.streaming.StreamJob (main): Output directory: /1452206272/<args.bucket>.list
   
 ### Status Messages
 
@@ -34,7 +63,7 @@ A task will be terminated if it does not get input, write an output, or receive 
 
     reporter:status:<message>
 
-GETing or PUTing a large objects can easily exceed default timeouts. Using boto's canned get and set *contents_from_file* functions, one can use the a callback function to report a periodic status. 
+GETing or PUTing a large objects can easily exceed default timeouts. Using boto's canned get and set *contents_from_file* functions, one can use the callback function to report a periodic status. 
 
     ## campanile.py
     class FileProgress:
@@ -68,10 +97,14 @@ While shared libraries and configuration files are a perfect use case for [boots
     import campanile
     import boto
 
-    cfgfiles = [
-        "/etc/campanile.cfg",
-        "./campanile.cfg"
-    ]
+    ... 
+
+    parser.add_argument('--config', '-c', default="./campanile.cfg",
+            help='Path to config file')
+    ...
+
+    cfgfiles = campanile.cfg_file_locations()
+    cfgfiles.insert(0, args.config)
     c = ConfigParser.SafeConfigParser()
     c.read(cfgfiles)
 
@@ -82,14 +115,19 @@ Campanile relies heavily on the [NLineInputFormat](https://hadoop.apache.org/doc
 
 **NOTE:** Another extremely important property of this function, is how often a S3 connection object is re-established. At the end of the split, another process, and therefore a new connection to S3 is made. S3 has hundreds, if not thousands of endpoints, and the only way to achieve distribution is to utilize the entire fleet. (Get link to article detailing this)
 
-    ## campanile.py provides and index function  
-    def stream_index():
+    ## campanile.py provides and index function
+    ## Note reducers don't get an index
+    def stream_index():    
     try:
         if os.environ['mapred_input_format_class'] == \
                 'org.apache.hadoop.mapred.lib.NLineInputFormat':
-            return 1
+            if os.environ['mapreduce_task_ismap'] == "true":
+                return 1
+            else:
+                return 0
     except:
         return 0
+
     
     ## objectcopy.py
     start_index = campanile.stream_index()
@@ -308,6 +346,8 @@ In some occasions, it is useful to diff two buckets before starting a copy. This
 ### MultipartList
 
 MultiPartList corresponds to the API request [UploadInitiate](http://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadInitiate.html). It's most difficult task is calculating part maps of source objects, that were uploaded with _multipart_. Review the details of multipart uploads [here](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html), and understand how etags are calculated based on part size(s). In these examples, Campanile uses a function similar to that of the AWS CLI to calculate part size. Since this article assumes the test files were uploaded using the aws cli, multipartlist will be able to determine the correct partsize. 
+
+![](img/mpworkflow.png)
 
 **NOTE:** The only way to copy an object and keep the same etag, is to know the partsize(s) of the source upload. 
 
@@ -585,13 +625,5 @@ To reduce network jitter and bandwidth sharing, the rule of thumb is to use the 
 
 ### TPS; Transactions per Second 
 
-Because each _Step_ is broken down by API, one can estimate tps based on step, maximum concurrent mappers, and cluser size. Anything over a few hundred, one must consider the buckets partition scheme, discussed in [S3 Performace Considerations](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html). 
-
-## Conclusion
-
-
-
-
-
-
+Because each _Step_ is broken down by API, one can estimate tps based on step, maximum concurrent mappers, and size. Anything over a few hundred, one must consider the buckets partition scheme, discussed in [S3 Performace Considerations](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html). 
 

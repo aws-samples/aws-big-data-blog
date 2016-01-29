@@ -13,7 +13,6 @@ import ConfigParser
 # -----------------------------------------------------------------------------
 sys.path.append(os.environ.get('PWD'))
 os.environ["BOTO_PATH"] = '/etc/boto.cfg:~/.boto:./.boto'
-
 import campanile
 import boto
 from boto.s3.connection import S3Connection
@@ -49,9 +48,13 @@ def main():
             help='Boto profile used for source connection')
     parser.add_argument('--dst-profile', 
             help='Boto profile used for destination connection')
+    parser.add_argument('--config', '-c', default="./campanile.cfg",
+            help='Path to config file')
     args = parser.parse_args()
 
     ## Config Object
+    cfgfiles = campanile.cfg_file_locations()
+    cfgfiles.insert(0, args.config)
     c = ConfigParser.SafeConfigParser({'ephemeral':'/tmp'})
     c.read(cfgfiles)
 

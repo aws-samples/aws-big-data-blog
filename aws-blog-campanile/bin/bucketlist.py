@@ -8,7 +8,6 @@ import sys
 ## Support for Streaming sandbox env
 sys.path.append(os.environ.get('PWD'))
 os.environ["BOTO_PATH"] = '/etc/boto.cfg:~/.boto:./.boto'
-
 import campanile
 import boto
 from boto.s3.connection import S3Connection

@@ -18,6 +18,9 @@ DEFAULTS = {
     's3n_blocksize' : 67108864,
     's3n_blocksizes' : [67108864]
 }
+CFGFILES = [
+    "/etc/campanile.cfg"
+]
 
 
 # -----------------------------------------------------------------------------
@@ -59,7 +62,10 @@ def stream_index():
     try:
         if os.environ['mapred_input_format_class'] == \
                 'org.apache.hadoop.mapred.lib.NLineInputFormat':
-            return 1
+            if os.environ['mapreduce_task_ismap'] == "true":
+                return 1
+            else:
+                return 0
     except:
         return 0
 
@@ -76,3 +82,11 @@ def partcount(etag):
     else:
         return 0
 
+def random_sleep(maxsleep=5):
+    sleep(randint(0,maxsleep))
+
+def config_section():
+    return os.path.splitext(os.path.basename(sys.argv[0]))[0]
+
+def cfg_file_locations():
+    return list(CFGFILES)
