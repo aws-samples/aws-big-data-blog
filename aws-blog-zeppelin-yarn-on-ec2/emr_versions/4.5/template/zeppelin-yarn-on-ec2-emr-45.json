@@ -154,8 +154,8 @@
               }
             },
              "sources": {
-							"/home/ec2-user/prereqs/": "https://s3.amazonaws.com/aws-bigdata-blog/artifacts/spark-1.6.1-bin-hadoop2.6.tgz"
-							},
+		"/home/ec2-user/prereqs/": "https://s3.amazonaws.com/aws-bigdata-blog/artifacts/spark-1.6.1-bin-hadoop2.6.tgz"
+		},
               "commands" : {
               "01-install-git" : {
               "command" : "git clone https://github.com/apache/incubator-zeppelin /home/ec2-user/zeppelin",       
@@ -222,13 +222,13 @@
             
             "files" : {
             "/home/ec2-user/prereqs/spark-1.6.1-bin-hadoop2.6/conf/spark-env.sh": {
-            "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/conf/spark-env.sh",
+            "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/emr_versions/4.5/conf/spark-env.sh",
             "mode": "000644",
             "owner" : "root",
             "group" : "root"
             },
              "/home/ec2-user/zeppelin/conf/zeppelin-env.sh": {
-             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/conf/zeppelin-env.sh",
+             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/emr_versions/4.5/conf/zeppelin-env.sh",
              "mode": "000644",
             "owner" : "root",
             "group" : "root"
