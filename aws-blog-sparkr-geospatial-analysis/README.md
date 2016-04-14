@@ -50,6 +50,6 @@ aws emr create-cluster --name ”Geospatial-SparkR-Application” \
 --profile profilename
 ```
 
-##link to Blog Post URL
+##link to blog post URL
 
 
