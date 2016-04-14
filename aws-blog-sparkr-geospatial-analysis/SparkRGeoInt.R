@@ -10,8 +10,9 @@
 #install.packages(c("plyr","dplyr","mapproj","RgoogleMaps","ggmap"))
 
 #Save visualization results to pdf below
-#we can use setwd to change the default path which is /home/hadoop
-pdf("gdeltmar24v50.pdf")
+#you can use setwd to change the path from the default current working directory
+setwd("/home/hadoop")
+pdf("SparkRGEOINTEMR.pdf")
 #load the required packages
 library(RgoogleMaps)
 library(ggmap)
