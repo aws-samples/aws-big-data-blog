@@ -1,7 +1,7 @@
 #Exploring Geospatial Intelligence using SparkR on Amazon EMR
 This is the code repository for the AWS Big Data blog - Exploring Geospatial Intelligence using SparkR on Amazon EMR
 
-##link to blog post URL
+##Link to blog post URL
 
 
 ## Prerequisites
