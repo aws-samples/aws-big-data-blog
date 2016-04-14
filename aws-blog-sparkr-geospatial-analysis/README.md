@@ -18,12 +18,13 @@ CAMEO is a framework for coding event data related to news coverage. For the pur
 Please refer to http://data.gdeltproject.org/documentation/CAMEO.Manual.1.1b3.pdf for more information on what these codes mean.
 
 ##Description of R Code Samples
+Readers are encouraged to utilize the code samples provided here and implement them in different ways. While the blog outlines a use case for spatial analysis of events that took place in the US, the code samples provided here represent multiple use cases for events that took place in the US as well as India. Readers can choose to perform this analysis on a different set of countries, and/or choose from other news categories of interest to them. 
 
 ##1.SparkRGeoInt.R
-This code sample contains the application code for this blog. The code contains the logic for two separate use cases related to Geospatial Intelligence on the GDELT dataset. The use cases have been described later in this document.
+This code sample contains the application code for the use referenced in the blog. In addition, this sample presents another use case described later in this document. While the blog focuses on spatial analysis of data in the US only, the code samples provided here illustrate how this can be done for India. 
 
 ##2.SparkRGeoIntPipes.R
-This code sample provides an alternate way to implement the specified use cases using Pipeline operators, namely %>>% or Pipes. Pipeline operators are becoming increasingly popular in the R community. Magrittr provides another pipeline operator (%>%) and is similar in concept. Ultimately it is the developer's choice and depends on the use case and nature of the problem. Here it has been provided purely for illustrative purposes.
+This code sample provides an alternate way to implement the use cases specified below using Pipeline operators, namely %>>% or Pipes. Pipeline operators are becoming increasingly popular in the R community. Magrittr provides another pipeline operator (%>%) and is similar in concept. Ultimately it is the reader's choice and could depend on the use case and nature of the problem. Here it has been provided purely for illustrative purposes.
 
 ##3.SparkR_Redshift.R  -- Demonstrates Spark to Redshift Integration using SparkR
 Demonstrates how to integrate SparkR with Redshift using the Spark to Redshift Connector from Databricks
@@ -32,8 +33,9 @@ Demonstrates how to integrate SparkR with Redshift using the Spark to Redshift C
 Demonstrates how to integrate Spark-SQL with Redshift using the Spark to Redshift Connector from Databricks
 
 ##Description of Use cases
-Use Case 1: Identifies where specific events of interest are taking place on a map(based on eventcode)
-Use Case 2: Identifies Top 25 locations with highest density/frequency of events
+Use Case 1: Identifies where specific events of interest are taking place on a map(based on chosen eventcode). This is the primary use case referenced in the blog.
+
+Use Case 2: Identifies Top 25 locations in a given country with highest density/frequency of events.
 
 ##Example EMR cluster creation
 ```
