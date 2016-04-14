@@ -1,5 +1,8 @@
-#Exploring GDELT - Geospatial Analysis using SparkR on EMR
-This is the code repository for the AWS Big Data blog  - Exploring GDELT : Geospatial Intelligence using SparkR on EMR
+#Exploring Geospatial Intelligence using SparkR on Amazon EMR
+This is the code repository for the AWS Big Data blog - Exploring Geospatial Intelligence using SparkR on Amazon EMR
+
+##link to blog post URL
+
 
 ## Prerequisites
   - Amazon Web Services account
@@ -50,6 +53,6 @@ aws emr create-cluster --name ”Geospatial-SparkR-Application” \
 --profile profilename
 ```
 
-##link to blog post URL
+
 
 
