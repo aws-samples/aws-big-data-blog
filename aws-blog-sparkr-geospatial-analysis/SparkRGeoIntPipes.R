@@ -12,8 +12,10 @@
 #install.packages("pipeR")
 
 #Save visualization results to pdf below
-##we can use setwd to change the default path which is /home/hadoop
-pdf("gdeltmar24v12.pdf")
+#you can use setwd to change the path from the default current working directory
+setwd("/home/hadoop")
+pdf("SparkRGEOINTEMRpipes.pdf")
+
 #plot.new()
 library(RgoogleMaps)
 library(ggmap)
