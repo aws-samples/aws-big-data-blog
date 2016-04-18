@@ -25,63 +25,7 @@
 			<version>${spark.version}</version>
 			<scope>provided</scope>
 		</dependency>
-		
-		<!-- 
-		<dependency>
-			<groupId>org.apache.spark</groupId>
-			<artifactId>spark-graphx_2.10</artifactId>
-			<version>1.6.1</version>
-			<scope>provided</scope>
-		</dependency>
-		
-		<dependency>
-			<groupId>com.helixleisure.dna</groupId>
-			<artifactId>helix-dna-thrift-schemas</artifactId>
-			<exclusions>
-				<exclusion>
-					<artifactId>slf4j-simple</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>slf4j-api</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>google-collections</artifactId>
-					<groupId>com.google.collections</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>slf4j-log4j12</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 
-		<dependency>
-			<groupId>com.backtype</groupId>
-			<artifactId>dfs-datastores</artifactId>
-			<exclusions>
-				<exclusion>
-					<artifactId>slf4j-api</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>slf4j-log4j12</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>guava</artifactId>
-					<groupId>com.google.guava</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<dependency>
-			<groupId>net.openhft</groupId>
-			<artifactId>zero-allocation-hashing</artifactId>
-			<version>0.5</version>
-		</dependency>
- 		-->
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
