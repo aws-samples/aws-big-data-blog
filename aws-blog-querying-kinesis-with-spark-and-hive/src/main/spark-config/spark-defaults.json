@@ -1,0 +1,8 @@
+[
+{
+	"Classification": "spark-defaults",
+	"Properties": {
+		"spark.sql.hive.thriftServer.singleSession": "true"
+	}
+}
+]
