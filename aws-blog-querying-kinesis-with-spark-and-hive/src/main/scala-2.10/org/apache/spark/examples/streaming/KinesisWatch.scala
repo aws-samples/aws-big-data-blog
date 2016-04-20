@@ -116,6 +116,7 @@ object KinesisWatch extends Logging {
 
     val hiveContext = new HiveContext(ssc.sparkContext);
     
+    
     //define the schema for input data structure
     //val schemaString = "datetimeid customerid grosssolar netsolar load controlledload"
     //Passing the schemaString as a part of the arguments seperated by spaces.
@@ -157,7 +158,6 @@ object KinesisWatch extends Logging {
 
 
 // creating a HiveContext to present via JDBC - connect via JDBC /Beeline to test it.
-
 HiveThriftServer2.startWithContext(hiveContext)
 
     // Start the streaming context and await termination - CTRL+C to terminate on console.

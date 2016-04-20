@@ -23,8 +23,8 @@ else
 	INSTANCE_TYPE=$3
 fi
 
-INSTANCE_GROUPS="InstanceGroupType=MASTER,InstanceCount=1,InstanceType=$INSTANCE_TYPE InstanceGroupType=CORE,InstanceCount=2,InstanceType=$INSTANCE_TYPE"
+INSTANCE_GROUPS="InstanceGroupType=MASTER,InstanceCount=1,BidPrice=0.08,InstanceType=$INSTANCE_TYPE InstanceGroupType=CORE,InstanceCount=2,BidPrice=0.08,InstanceType=$INSTANCE_TYPE"
 BOOTSTRAP_ACTIONS="Path=s3://aws-bigdata-blog/artifacts/Querying_Amazon_Kinesis/DownloadKCLtoEMR400.sh,Name=InstallKCLLibs"
 
-aws emr create-cluster --release-label $RELEASE_LABEL --applications $APPLICATIONS --ec2-attributes KeyName=$KEY_NAME --use-default-roles --instance-groups $INSTANCE_GROUPS --bootstrap-actions $BOOTSTRAP_ACTIONS
+aws emr create-cluster --release-label $RELEASE_LABEL --applications $APPLICATIONS --ec2-attributes KeyName=$KEY_NAME --use-default-roles --instance-groups $INSTANCE_GROUPS --bootstrap-actions $BOOTSTRAP_ACTIONS --configurations https://s3-ap-southeast-1.amazonaws.com/helix-public/spark-defaults.json
 
