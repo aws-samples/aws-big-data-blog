@@ -1,0 +1,836 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Apache Ignite cluster CloudFormation template file.",
+   "Parameters":{
+      "VpcId":{
+         "Description":"VpcId of your existing Virtual Private Cloud (VPC)",
+         "Type":"AWS::EC2::VPC::Id"
+      },
+      "FirstSubnetId":{
+         "Description":"First subnet ID in your Virtual Private Cloud (VPC)",
+         "Type":"AWS::EC2::Subnet::Id"
+      },
+      "SecondSubnetId":{
+         "Description":"Second subnet ID in your Virtual Private Cloud (VPC)",
+         "Type":"AWS::EC2::Subnet::Id"
+      },
+      "ThirdSubnetId":{
+         "Description":"Third subnet ID in your Virtual Private Cloud (VPC)",
+         "Type":"AWS::EC2::Subnet::Id"
+      },
+      "SSHKeyName":{
+         "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instances",
+         "Type":"AWS::EC2::KeyPair::KeyName"
+      },
+      "CIDRToWhitelist":{
+         "Description":"Internal VPC IP CIDR for internal communication for Ignite",
+         "Type":"String",
+         "MinLength":"9",
+         "MaxLength":"18",
+         "Default":"0.0.0.0/0",
+         "AllowedPattern":"(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+         "ConstraintDescription":"must be a valid CIDR range of the form x.x.x.x/x."
+      },
+      "RemoteAccessCIDR":{
+         "Description":"IP CIDR from where you could SSH into Ignite cluster",
+         "Type":"String",
+         "MinLength":"9",
+         "MaxLength":"18",
+         "Default":"0.0.0.0/0",
+         "AllowedPattern":"(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+         "ConstraintDescription":"must be a valid CIDR range of the form x.x.x.x/x."
+      },
+      "S3Bucket":{
+         "Description":"S3 bucket Name for discovery",
+         "Type":"String"
+      },
+      "IgniteCodeLocation":{
+         "Default":"s3://publicbucketbabupe/ignitelibrary/apache-ignite-fabric-1.5.0.final-bin.zip",
+         "Description":"S3 location for Ignite code",
+         "Type":"String"
+      },
+      "IgniteconfigCodeLocation":{
+         "Default":"s3://publicbucketbabupe/ignitelibrary/configureIgnite.sh",
+         "Description":"S3 location for Ignite configuration code",
+         "Type":"String"
+      },
+      "awssdklocation":{
+         "Default":"s3://publicbucketbabupe/ignitelibrary/aws-java-sdk-1.3.21.1.jar",
+         "Description":"S3 location for AWS SDK for discovery using S3",
+         "Type":"String"
+      },
+      "InstanceType":{
+         "Description":"EC2 instance type",
+         "Type":"String",
+         "Default":"t2.medium",
+         "AllowedValues":[
+            "t2.medium",
+            "t2.large",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "m4.large",
+            "m4.xlarge",
+            "m4.2xlarge",
+            "m4.4xlarge",
+            "m4.10xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge",
+            "c4.large",
+            "c4.xlarge",
+            "c4.2xlarge",
+            "c4.4xlarge",
+            "c4.8xlarge",
+            "r3.large",
+            "r3.xlarge",
+            "r3.2xlarge",
+            "r3.4xlarge",
+            "r3.8xlarge",
+            "i2.xlarge",
+            "i2.2xlarge",
+            "i2.4xlarge",
+            "i2.8xlarge",
+            "d2.xlarge",
+            "d2.2xlarge",
+            "d2.4xlarge",
+            "d2.8xlarge"
+         ],
+         "ConstraintDescription":"must be a valid EC2 instance type."
+      },
+      "FleetSize":{
+         "Description":"Number of nodes in the Ignite cluster",
+         "Type":"Number",
+         "Default":"1",
+         "MaxValue":"300",
+         "MinValue":"1"
+      },
+      "CacheName":{
+         "Default":"IgniteCache",
+         "Description":"Cache Name",
+         "Type":"String"
+      },
+      "CacheReplicas":{
+         "Default":"1",
+         "Description":"Number of replicas for cache data",
+         "Type":"Number"
+      },
+      "JavaVersion":{
+         "Default":"Java7",
+         "Description":"Java Version",
+         "Type":"String",
+         "AllowedValues":[
+            "Java7",
+            "Java8"
+         ],
+         "ConstraintDescription":"only Java7 or Java8 version allowed"
+      }
+   },
+   "Conditions":{
+    "Installjava7":{
+         "Fn::Equals":[
+            {
+               "Ref":"JavaVersion"
+            },
+            "Java7"
+         ]
+    }
+  },
+   "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [{
+                    "Label": {
+                        "default": "Network Stack"
+                    },
+                    "Description": {
+                        "default": "Enter VPC related information"
+                    },
+                    "Parameters": ["VpcId", "FirstSubnetId", "SecondSubnetId", "ThirdSubnetId"]
+                }, {
+                    "Label": {
+                        "default": "EC2 Instance Configuration"
+                    },
+                    "Description": {
+                        "default": "Choice of Instance type and number of nodes configuration"
+                    },
+                    "Parameters": ["InstanceType", "FleetSize", "SSHKeyName", "RemoteAccessCIDR", "CIDRToWhitelist"]
+                },
+                {
+                    "Label": {
+                        "default": "S3 bucket name for node discovery"
+                    },
+                    "Description": {
+                        "default": "This bucket will be used by Ignite to discover nodes in the cluster"
+                    },
+                    "Parameters": ["S3Bucket"]
+                },
+                {
+                    "Label": {
+                        "default": "S3 bucket name for Ignite code"
+                    },
+                    "Description": {
+                        "default": "This bucket will be used to host ignite binaries. Example: s3://<bucket-name>/<path-to-binaries>"
+                    },
+                    "Parameters": ["IgniteCodeLocation", "IgniteconfigCodeLocation", "awssdklocation"]
+                },
+                {
+                    "Label": {
+                        "default": "Ignite Cluster Information"
+                    },
+                    "Description": {
+                        "default": "Enter Cluster Information"
+                    },
+                    "Parameters": ["CacheName", "JavaVersion", "CacheReplicas"]
+                }
+            ],
+            "ParameterLabels": {
+                "VpcId": {
+                    "default": "Enter VPC ID"
+                },
+                "FirstSubnetId": {
+                    "default": "Enter First Subnet ID"
+                },
+                "SecondSubnetId": {
+                    "default": "Enter Second Subnet ID"
+                },
+                "ThirdSubnetId": {
+                    "default": "Enter Third Subnet ID"
+                },
+                "InstanceType": {
+                    "default": "Enter Instance Type for cache nodes"
+                },
+                "FleetSize": {
+                    "default": "Enter number of nodes to launch"
+                },
+                "SSHKeyName": {
+                    "default": "Enter SSH Key pair name"
+                },
+                "RemoteAccessCIDR": {
+                    "default": "Enter remote CIDR to allow access"
+                },
+                "CIDRToWhitelist": {
+                    "default": "Internal CIDR IP range to whitelist"
+                },
+                "S3Bucket": {
+                    "default": "Enter bucket name for discovery"
+                },
+                "IgniteCodeLocation": {
+                    "default": "Enter location for Ignite binaries"
+                },
+                "IgniteconfigCodeLocation": {
+                    "default": "Enter location for ignite configuration script"
+                },
+                "awssdklocation": {
+                    "default": "Enter location for AWS SDK"
+                },
+                "CacheName": {
+                    "default": "Enter name of Cache"
+                },
+                "CacheReplicas": {
+                    "default": "Enter number of replicas for cache"
+                },
+                "JavaVersion": {
+                    "default": "Enter Version of Java"
+                }
+            }
+        }
+    },
+   "Mappings":{
+      "AWSInstanceType2Capabilites":{
+        "t2.medium":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "t2.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "m3.medium":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "m3.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "m3.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "m3.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c3.8xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "c3.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c3.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c3.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c3.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "c4.8xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c4.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c4.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c4.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "c4.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "r3.8xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "r3.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "r3.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "r3.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "r3.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "i2.8xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "i2.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "i2.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "i2.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "i2.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"False"
+         },
+         "m4.10xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "m4.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "m4.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "m4.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "m4.large":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "d2.8xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "d2.4xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "d2.2xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         },
+         "d2.xlarge":{
+            "Arch":"64HVM",
+            "EBSOpt":"True"
+         }
+      },
+      "AWSAmazonLinuxAMI":{
+         "us-east-1":{
+            "name":"Virginia",
+            "201503":"ami-60b6c60a"
+         },
+         "us-west-2":{
+            "name":"Oregon",
+            "201503":"ami-f0091d91"
+         },
+         "us-west-1":{
+            "name":"California",
+            "201503":"ami-d5ea86b5"
+         },
+         "eu-west-1":{
+            "name":"Ireland",
+            "201503":"ami-bff32ccc"
+         },
+         "eu-west-2":{
+            "name":"Frankfurt",
+            "201503":"ami-bc5b48d0"
+         },
+         "ap-southeast-1":{
+            "name":"Singapore",
+            "201503":"ami-c9b572aa"
+         },
+         "ap-southeast-2":{
+            "name":"Sydney",
+            "201503":"ami-48d38c2b"
+         },
+         "ap-northeast-1":{
+            "name":"Tokyo",
+            "201503":"ami-383c1956"
+         },
+         "sa-east-1":{
+            "name":"SaoPaulo",
+            "201503":"ami-6817af04"
+         }
+      }
+   },
+   "Resources":{
+      "IgniteRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "AssumeRolePolicyDocument":{
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "ec2.amazonaws.com",
+                           "autoscaling.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Path":"/",
+            "Policies":[
+               {
+                  "PolicyName":"IgnitePolicy",
+                  "PolicyDocument":{
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "s3:*",
+                              "ec2:Describe*",
+                              "ec2:AttachNetworkInterface",
+                              "ec2:AttachVolume",
+                              "ec2:CreateTags",
+                              "ec2:CreateVolume",
+                              "ec2:RunInstances",
+                              "ec2:StartInstances",
+                              "ec2:DeleteVolume",
+                              "ec2:CreateSecurityGroup",
+                              "ec2:CreateSnapshot",
+                              "autoscaling:*"
+                           ],
+                           "Resource":"*"
+                        },
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "dynamodb:*",
+                              "dynamodb:Scan",
+                              "dynamodb:Query",
+                              "dynamodb:GetItem",
+                              "dynamodb:BatchGetItem",
+                              "dynamodb:UpdateTable"
+                           ],
+                           "Resource":[
+                              "*"
+                           ]
+                        }
+                     ]
+                  }
+               }
+            ]
+         }
+      },
+      "IgniteProfile":{
+         "Type":"AWS::IAM::InstanceProfile",
+         "Properties":{
+            "Roles":[
+               {
+                  "Ref":"IgniteRole"
+               }
+            ]
+         }
+      },
+      "IgnitediscoveryUser" : {
+        "Type" : "AWS::IAM::User",
+        "Properties" : {
+          "Path" : "/",
+          "Policies":[
+               {
+                  "PolicyName":"IgnitePolicy",
+                  "PolicyDocument":{
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "s3:*"
+                           ],
+                           "Resource" : "*"
+                        }
+                     ]
+                  }
+               }
+          ]
+        }
+      },
+    "Igniteaccesskey" : {
+        "DependsOn":[
+            "IgnitediscoveryUser"
+         ],
+        "Type" : "AWS::IAM::AccessKey",
+        "Properties" : {
+            "UserName" : { "Ref" : "IgnitediscoveryUser" }
+        }
+    },
+      "IgniteSecurityGroup":{
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{
+            "GroupDescription":"Enable access for Communication(Trim as Needed)",
+            "VpcId":{
+               "Ref":"VpcId"
+            },
+            "SecurityGroupIngress":[
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"0",
+                  "ToPort":"65535",
+                  "CidrIp":{
+                     "Ref":"CIDRToWhitelist"
+                  }
+               },
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"22",
+                  "ToPort":"22",
+                  "CidrIp":{
+                     "Ref":"CIDRToWhitelist"
+                  }
+               },
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"22",
+                  "ToPort":"22",
+                  "CidrIp":{
+                     "Ref":"RemoteAccessCIDR"
+                  }
+               }
+            ],
+            "SecurityGroupEgress":[
+               {
+                  "IpProtocol":"-1",
+                  "CidrIp":"0.0.0.0/0",
+                  "FromPort":"1",
+                  "ToPort":"65535"
+               }
+            ]
+         }
+      },
+      "IgniteFleet":{
+         "Type":"AWS::AutoScaling::AutoScalingGroup",
+         "DependsOn":[
+            "IgniteLaunchConfig"
+         ],
+         "UpdatePolicy":{
+            "AutoScalingRollingUpdate":{
+               "MaxBatchSize":"1",
+               "MinInstancesInService":"1",
+               "PauseTime":"PT2M30S"
+            }
+         },
+         "Properties":{
+            "VPCZoneIdentifier":[
+               {
+                  "Ref":"SecondSubnetId"
+               },
+               {
+                  "Ref":"ThirdSubnetId"
+               },
+               {
+                  "Ref":"FirstSubnetId"
+               }
+            ],
+            "LaunchConfigurationName":{
+               "Ref":"IgniteLaunchConfig"
+            },
+            "MinSize":{
+               "Ref":"FleetSize"
+            },
+            "MaxSize":{
+               "Ref":"FleetSize"
+            },
+            "DesiredCapacity":{
+               "Ref":"FleetSize"
+            },
+            "Tags":[
+               {
+                  "Key":"Name",
+                  "Value":"Ignite",
+                  "PropagateAtLaunch":"true"
+               }
+            ]
+         },
+         "CreationPolicy":{
+            "ResourceSignal":{
+               "Timeout":"PT30M",
+               "Count":{
+                  "Ref":"FleetSize"
+               }
+            }
+         }
+      },
+      "IgniteScalingPolicy":{
+         "Type":"AWS::AutoScaling::ScalingPolicy",
+         "DependsOn":"IgniteFleet",
+         "Properties":{
+            "AdjustmentType":"ChangeInCapacity",
+            "AutoScalingGroupName":{
+               "Ref":"IgniteFleet"
+            },
+            "Cooldown":120,
+            "ScalingAdjustment":"1"
+         }
+      },
+      "IgniteLaunchConfig":{
+         "Type":"AWS::AutoScaling::LaunchConfiguration",
+         "DependsOn":[
+            "IgniteProfile",
+            "IgniteSecurityGroup",
+            "Igniteaccesskey"
+         ],
+         "Properties":{
+            "InstanceType":{
+               "Ref":"InstanceType"
+            },
+            "KeyName":{
+               "Ref":"SSHKeyName"
+            },
+            "ImageId":{
+               "Fn::FindInMap":[
+                  "AWSAmazonLinuxAMI",
+                  {
+                     "Ref":"AWS::Region"
+                  },
+                  "201503"
+               ]
+            },
+            "SecurityGroups":[
+               {
+                  "Ref":"IgniteSecurityGroup"
+               }
+            ],
+            "IamInstanceProfile":{
+               "Ref":"IgniteProfile"
+            },
+            "InstanceMonitoring":"false",
+            "UserData":{
+               "Fn::Base64":{
+                  "Fn::Join":[
+                     "",
+                     [
+                        "#! /bin/bash -v\n",
+                        "mkdir -p /home/ec2-user/ignite \n",
+                        "cd /home/ec2-user/ignite \n",
+                        "until ping -c 1 google.com \n",
+                        "do \n",
+                        "sleep 5; \n",
+                        "done \n",
+                        "aws s3 cp ",
+                        {
+                           "Ref":"IgniteCodeLocation"
+                        },
+                        " ignite.zip \n",
+                        "unzip ignite.zip \n",
+                        "mv `ls|grep -v ignite.zip` ignite \n",
+                        "cd ignite \n",
+                        "aws s3 cp ",
+                        {
+                           "Ref":"awssdklocation"
+                        },
+                        " aws-sdk.jar \n",
+                        "cp aws-sdk.jar libs/ \n",
+                        "cp libs/optional/ignite-aws/*.jar libs/ \n",
+                        "echo \"",
+                        {
+                           "Ref":"CacheName"
+                        },
+                        "\" > /tmp/cachename.data \n",
+                        "echo \"",
+                        {
+                           "Ref":"CacheReplicas"
+                        },
+                        "\" > /tmp/cachereplicas.data \n",
+                        "echo \"",
+                        {
+                           "Ref":"S3Bucket"
+                        },
+                        "\" > /tmp/s3bucket.data \n",
+                        "aws s3 cp ",
+                        {
+                           "Ref":"IgniteconfigCodeLocation"
+                        },
+                        " configureIgnite.sh \n",
+                        "chmod +x configureIgnite.sh \n",
+                        "./configureIgnite.sh $(cat /tmp/cachename.data) $(cat /tmp/cachereplicas.data) $(cat /tmp/s3bucket.data) ",
+                        {
+                           "Ref" : "Igniteaccesskey" 
+                        },
+                        " ",
+                        {
+                           "Fn::GetAtt" : [ "Igniteaccesskey", "SecretAccessKey" ]
+                        },
+                        " \n",
+                        "cp config/default-config.xml  config/default-config.xml.backup \n",
+                        "cp /tmp/igniteconfig.xml config/default-config.xml \n",
+                        "nohup bin/ignite.sh -J-Xms$(cat /tmp/heapsize.log) -J-Xmx$(cat /tmp/heapsize.log) & \n",
+                        
+                        "# Helper function\n",
+                        "function error_exit\n",
+                        "{\n",
+                        "  /opt/aws/bin/cfn-signal -e 1 --reason=\"$1\" --stack ",
+                        {
+                           "Ref":"AWS::StackName"
+                        },
+                        " --region ",
+                        {
+                           "Ref":"AWS::Region"
+                        },
+                        "  --resource=IgniteFleet \n",
+                        "  exit 1\n",
+                        "}\n",
+                        "# Install packages\n",
+                        "/opt/aws/bin/cfn-init -s ",
+                        {
+                           "Ref":"AWS::StackId"
+                        },
+                        " -r IgniteLaunchConfig ",
+                        "    --region ",
+                        {
+                           "Ref":"AWS::Region"
+                        },
+                        "\n",
+                        "# All is well so signal success\n",
+                        "  /opt/aws/bin/cfn-signal -e 0 --reason=\"Ignitesetup complete\" --stack ",
+                        {
+                           "Ref":"AWS::StackName"
+                        },
+                        " --region ",
+                        {
+                           "Ref":"AWS::Region"
+                        },
+                        "  --resource=IgniteFleet \n"
+                     ]
+                  ]
+               }
+            }
+         },
+         "Metadata":{
+            "AWS::CloudFormation::Init":{
+               "configSets":{
+                  "default":[
+                     "configure_hosts",
+                     {
+                        "Fn::If":[
+                           "Installjava7",
+                           "install_java7",
+                           "install_java8"
+                        ]
+                     },
+                     "install_jna"
+                  ]
+               },
+               "configure_hosts":{
+                  "commands":{
+                     "01-create_hosts_entry-on_boot":{
+                        "command":"echo \"`curl -s curl http://169.254.169.254/latest/meta-data/local-ipv4` `hostname`\" >>/etc/hosts",
+                        "test":"test ! -f .create_hosts_entry-semaphore"
+                     },
+                     "02-signal_startup_complete":{
+                        "command":"touch .create_hosts_entry-semaphore"
+                     }
+                  }
+               },
+               "install_java7":{
+                  "packages":{
+                     "yum":{
+                        "java-1.7.0-openjdk-devel":[
+
+                        ]
+                     }
+                  },
+                  "commands":{
+                     "use_java7":{
+                        "command":"alternatives --set java /usr/lib/jvm/jre-1.7.0-openjdk.x86_64/bin/java"
+                     }
+                  }
+               },
+               "install_java8":{
+                  "packages":{
+                     "yum":{
+                        "java-1.8.0-openjdk-devel":[
+
+                        ]
+                     }
+                  },
+                  "commands":{
+                     "use_java8":{
+                        "command":"alternatives --set java /usr/lib/jvm/jre-1.8.0-openjdk.x86_64/bin/java"
+                     }
+                  }
+               },
+               "install_jna":{
+                  "packages":{
+                     "yum":{
+                        "jna":[
+
+                        ]
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}
