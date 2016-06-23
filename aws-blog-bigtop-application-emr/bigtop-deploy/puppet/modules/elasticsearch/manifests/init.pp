@@ -46,6 +46,13 @@ class elasticsearch {
       command => "/usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.6.0",
       require => [Package["elasticsearch"]],
     }
+    
+    service { "elasticsearch":
+      ensure =>running,
+      subscribe => File["/etc/elasticsearch/elasticsearch.yml"],
+      require => [Package["elasticsearch"]],
+      hasrestart => true,
+    }
 
   }
 }
