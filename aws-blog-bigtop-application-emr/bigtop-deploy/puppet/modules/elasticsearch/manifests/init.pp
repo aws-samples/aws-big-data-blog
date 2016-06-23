@@ -29,7 +29,7 @@ class elasticsearch {
     include common
   }
 
-  class slave ($elasticsearch_port = 9200, $isMaster = "true"){
+  class slave ($elasticsearch_port = 9202, $isMaster = "false"){
     include common
   }
 
