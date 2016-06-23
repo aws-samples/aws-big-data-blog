@@ -27,7 +27,7 @@ end
 def configure_elasticsearch()
   clusterMetaData = getClusterMetaData
   File.open("/etc/elasticsearch/elasticsearch.yml", "a+") do |config|
-    if clusterMetaData['isMaster']==true
+    if clusterMetaData['isMaster'] == true then
        config.puts("http.port: 9200")
     else
        config.puts("http.port: 9202")
@@ -35,6 +35,7 @@ def configure_elasticsearch()
     config.puts("node.master: #{clusterMetaData['isMaster']}")
     config.puts("node.data: true")
     config.puts("cluster.name: #{clusterMetaData['cluster_Name']}")
+    config.puts("discovery.type: ec2")
     config.puts("cloud.aws.region: #{clusterMetaData['region']}")
     config.puts("discovery.ec2.tag.aws:elasticmapreduce:job-flow-id: #{clusterMetaData['cluster_Name']}")
   end
