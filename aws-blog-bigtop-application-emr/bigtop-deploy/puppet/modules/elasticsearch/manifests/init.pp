@@ -9,21 +9,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 class elasticsearch {
   class client {
-    package { ["elasticsearch"]: ensure => latest, }
 
-    file {
-        "/usr/share/elasticsearch/bin/elasticsearch_configure.rb":
-        content => template("elasticsearch/elasticsearch_configure.rb"),
-        mode  => 755,
-        require => [Package["elasticsearch"]],
+    $clusterId = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep \"jobFlowId\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    $region = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep 'region\"' | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    $isMaster = generate ("/bin/bash", "-c", "cat /mnt/var/lib/info/instance.json | grep \"isMaster\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+
+    if ($isMaster == true){
+      include master
     }
-
-    exec { "configure elasticsearch":
-        command => "/usr/share/elasticsearch/bin/elasticsearch_configure.rb",
-        require => [Package["elasticsearch"]],
+    else {
+      include slave
     }
   }
 
+  class master ($elasticsearch_port = 9200, $isMaster = "true") {
+    include common
+  }
+
+  class slave ($elasticsearch_port = 9200, $isMaster = "true"){
+    include common
+  }
+
+  class common () {
+    package { ["elasticsearch"]: ensure => latest, }
+
+    file {
+      "/etc/elasticsearch/elasticsearch.yml":
+      content => template("elasticsearch/elasticsearch.yml"),
+      require => [Package["elasticsearch"]],
+    }
+
+    exec { "install aws plugin":
+      command => "/usr/share/elasticsearch/bin/plugin -install elasticsearch/elasticsearch-cloud-aws/2.6.0",
+      require => [Package["elasticsearch"]],
+    }
+
+  }
 }
