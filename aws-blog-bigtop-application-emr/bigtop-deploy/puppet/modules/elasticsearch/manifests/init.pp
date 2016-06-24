@@ -14,8 +14,11 @@ class elasticsearch {
   class client {
 
     $clusterId = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep \"jobFlowId\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    notice("clusterId variable is: ${clusterId}")
     $region = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep 'region\"' | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    notice("region variable is: ${region}")
     $isMaster = generate ("/bin/bash", "-c", "cat /mnt/var/lib/info/instance.json | grep \"isMaster\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    notice("isMaster variable is: ${isMaster}")
 
     if ($isMaster){
       include master
