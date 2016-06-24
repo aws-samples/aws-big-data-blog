@@ -45,7 +45,7 @@ class elasticsearch {
     service { "elasticsearch":
       ensure =>running,
 #      require => [Package["elasticsearch"], File["/etc/elasticsearch/elasticsearch.yml"]],
-      subscribe => File["/etc/elasticsearch/elasticsearch.yml"]],
+      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
       hasrestart => true,
       hasstatus => true,
     }
