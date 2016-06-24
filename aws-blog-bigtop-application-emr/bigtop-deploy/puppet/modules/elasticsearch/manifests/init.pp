@@ -17,21 +17,10 @@ class elasticsearch {
     $region = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep 'region\"' | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
     $isMaster = generate ("/bin/bash", "-c", "cat /mnt/var/lib/info/instance.json | grep \"isMaster\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
 
-    if ('true' in $isMaster){
-      include master
-    }
-    else {
-      include slave
-    }
+    include common
+
   }
 
-  class master ($elasticsearch_port = 9200) {
-    include common
-  }
-
-  class slave ($elasticsearch_port = 9202){
-    include common
-  }
 
   class common () {
     package { ["elasticsearch"]: ensure => latest, }
@@ -49,7 +38,6 @@ class elasticsearch {
     
     service { "elasticsearch":
       ensure =>running,
-      subscribe => File["/etc/elasticsearch/elasticsearch.yml"],
       require => [Package["elasticsearch"]],
       hasrestart => true,
     }
