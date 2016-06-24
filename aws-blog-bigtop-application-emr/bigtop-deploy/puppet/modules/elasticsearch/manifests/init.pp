@@ -30,7 +30,7 @@ class elasticsearch {
       "/etc/elasticsearch/elasticsearch.yml":
       content => template("elasticsearch/elasticsearch.yml"),
 #      require => [Package["elasticsearch"]],
-      notify => service['elasticsearch'],
+      notify => Service['elasticsearch'],
     }
 
     exec { "install aws plugin":
