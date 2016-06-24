@@ -20,7 +20,7 @@ class elasticsearch {
     $isMaster = generate ("/bin/bash", "-c", "cat /mnt/var/lib/info/instance.json | grep \"isMaster\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
     notice("isMaster variable is: ${isMaster}")
 
-    if ($isMaster){
+    if ($isMaster == 'true'){
       include master
     }
     else {
