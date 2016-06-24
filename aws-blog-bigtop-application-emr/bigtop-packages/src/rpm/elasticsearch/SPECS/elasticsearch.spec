@@ -33,7 +33,6 @@ Source1: do-component-build
 Source2: install_elasticsearch.sh
 Source3: elasticsearch
 Source4: logging.yml
-Source5: elasticsearch.yml
  
 %global initd_dir %{_sysconfdir}/init.d
  

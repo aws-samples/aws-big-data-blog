@@ -138,6 +138,5 @@ cp -a target/bin/plugin $PREFIX/${LIB_DIR}/bin/
  
 cp -a $DISTRO_DIR/elasticsearch $PREFIX/etc/init.d/
 cp -a $DISTRO_DIR/logging.yml $PREFIX/etc/elasticsearch
-cp -a $DISTRO_DIR/elasticsearch.yml $PREFIX/etc/elasticsearch
  
  
