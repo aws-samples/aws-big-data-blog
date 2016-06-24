@@ -37,11 +37,11 @@ class elasticsearch {
       require => [Package["elasticsearch"]],
     }
     
-    service { "elasticsearch":
-      ensure =>running,
-      require => [Package["elasticsearch"]],
-      hasrestart => true,
-    }
+#    service { "elasticsearch":
+#      ensure =>running,
+#      require => [Package["elasticsearch"]],
+#      hasrestart => true,
+#    }
 
   }
 }
