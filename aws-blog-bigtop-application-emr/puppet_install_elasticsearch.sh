@@ -10,7 +10,7 @@ cd /home/hadoop/bigtop/bigtop-deploy/puppet/modules/elasticsearch/manifests/
 echo "getting puppet recipe"
 sudo  wget https://raw.githubusercontent.com/hvivani/aws-big-data-blog/patch-1/aws-blog-bigtop-application-emr/bigtop-deploy/puppet/modules/elasticsearch/manifests/init.pp
 echo "creating application template directory"
-sudo mkdir –p /home/hadoop/bigtop/bigtop-deploy/puppet/modules/elasticsearch/templates/
+sudo mkdir -p /home/hadoop/bigtop/bigtop-deploy/puppet/modules/elasticsearch/templates/
 echo "changing directory"
 cd /home/hadoop/bigtop/bigtop-deploy/puppet/modules/elasticsearch/templates/
 echo "getting puppet template"
