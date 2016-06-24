@@ -16,6 +16,7 @@ class elasticsearch {
     $clusterId = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep \"jobFlowId\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
     $region = generate ("/bin/bash", "-c", "cat /mnt/var/lib/instance-controller/extraInstanceData.json |grep 'region\"' | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
     $isMaster = generate ("/bin/bash", "-c", "cat /mnt/var/lib/info/instance.json | grep \"isMaster\" | cut -d':' -f2 | tr -d '\"' |tr -d ',' |tr -d ' '")
+    $elasticsearch_port = '9200'
 
     include common
 
