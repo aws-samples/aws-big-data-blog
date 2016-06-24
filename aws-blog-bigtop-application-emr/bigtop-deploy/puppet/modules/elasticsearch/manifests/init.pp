@@ -37,10 +37,15 @@ class elasticsearch {
       require => [Package["elasticsearch"]],
     }
     
+    exec { "start elasticsearch":
+      command => "/etc/init.d/elasticsearch start",
+      require => [Package["elasticsearch"]],
+    }
 #    service { "elasticsearch":
 #      ensure =>running,
 #      require => [Package["elasticsearch"]],
 #      hasrestart => true,
+#      hasstatus => true,
 #    }
 
   }
