@@ -44,7 +44,7 @@ class elasticsearch {
     }
 
     exec { "start elasticsearch":
-      command => "/sbin/initctl elasticsearch start",
+      command => "/sbin/initctl start elasticsearch",
       subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
     }
     
