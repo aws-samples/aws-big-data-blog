@@ -39,7 +39,7 @@ class elasticsearch {
     }
     
     exec { "start elasticsearch":
-      command => "/etc/init.d/elasticsearch start",
+      command => "/etc/init.d/elasticsearch restart",
       subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
     }
 #    service { "elasticsearch":
