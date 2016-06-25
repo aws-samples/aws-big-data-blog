@@ -42,6 +42,11 @@ class elasticsearch {
       "/etc/init/elasticsearch.conf":
       content => template("elasticsearch/elasticsearch.conf"),
     }
+
+    exec { "start elasticsearch":
+      command => "/sbin/initctl elasticsearch start",
+      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
+    }
     
 #    exec { "start elasticsearch":
 #      command => "/etc/init.d/elasticsearch restart",
