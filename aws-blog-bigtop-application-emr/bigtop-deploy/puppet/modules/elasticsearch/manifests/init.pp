@@ -38,10 +38,16 @@ class elasticsearch {
       require => [Package["elasticsearch"]],
     }
     
-    exec { "start elasticsearch":
-      command => "/etc/init.d/elasticsearch restart",
-      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
+    file {
+      "/etc/init/elasticsearch.conf":
+      content => template("elasticsearch/elasticsearch.conf"),
     }
+    
+#    exec { "start elasticsearch":
+#      command => "/etc/init.d/elasticsearch restart",
+#      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
+#    }
+
 #    service { "elasticsearch":
 #      ensure =>running,
 #      require => [Package["elasticsearch"], File["/etc/elasticsearch/elasticsearch.yml"]],
