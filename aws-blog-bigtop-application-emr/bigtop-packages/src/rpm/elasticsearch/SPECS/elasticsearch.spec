@@ -31,8 +31,7 @@ Buildroot: %(mktemp -ud %{_tmppath}/%{elasticsearch_name}-%{version}-%{release}-
 Source0: %{name}-%{version}.tar.gz
 Source1: do-component-build
 Source2: install_elasticsearch.sh
-Source3: elasticsearch
-Source4: logging.yml
+Source3: logging.yml
  
 %global initd_dir %{_sysconfdir}/init.d
  
@@ -86,13 +85,11 @@ bash %{SOURCE2} \
 %dir %attr(755,elasticsearch,elasticsearch) "/usr/share/elasticsearch/logs"
 %dir %attr(755,elasticsearch,elasticsearch) "/var/log/elasticsearch/"
 %attr(755,root,root) /usr/share/elasticsearch/bin/
-%attr(755,root,root) /etc/init.d/elasticsearch
 /usr/share/elasticsearch/lib/
 /usr/share/elasticsearch/lib/sigar/
 /usr/share/elasticsearch/bin/
 /usr/share/elasticsearch/plugins
 /etc/elasticsearch/
-/etc/init.d/elasticsearch
  
  
 %pre
