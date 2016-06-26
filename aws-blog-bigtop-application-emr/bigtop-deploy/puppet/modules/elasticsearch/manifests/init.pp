@@ -29,8 +29,6 @@ class elasticsearch {
     file {
       "/etc/elasticsearch/elasticsearch.yml":
       content => template("elasticsearch/elasticsearch.yml"),
-#      require => [Package["elasticsearch"]],
-#      notify => Service['elasticsearch'],
     }
 
     exec { "install aws plugin":
@@ -47,19 +45,6 @@ class elasticsearch {
       command => "/sbin/initctl start elasticsearch",
       subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
     }
-    
-#    exec { "start elasticsearch":
-#      command => "/etc/init.d/elasticsearch restart",
-#      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
-#    }
-
-#    service { "elasticsearch":
-#      ensure =>running,
-#      require => [Package["elasticsearch"], File["/etc/elasticsearch/elasticsearch.yml"]],
-#      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
-#      hasrestart => true,
-#      hasstatus => true,
-#    }
 
   }
 }
