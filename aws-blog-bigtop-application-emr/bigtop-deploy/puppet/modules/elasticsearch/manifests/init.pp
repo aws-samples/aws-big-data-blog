@@ -41,10 +41,6 @@ class elasticsearch {
       content => template("elasticsearch/elasticsearch.conf"),
     }
 
-#    exec { "start elasticsearch":
-#      command => "/sbin/initctl start elasticsearch",
-#      subscribe => [File["/etc/elasticsearch/elasticsearch.yml"]],
-#    }
     service { "elasticsearch":
       ensure => running,
       require => Package["elasticsearch"],
