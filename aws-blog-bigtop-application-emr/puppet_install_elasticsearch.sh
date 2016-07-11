@@ -2,7 +2,7 @@
 set -x
 
 echo "creating custom Bigtop repository"
-sudo aws s3 cp s3://vivanih-emr/bigtop/repos/Bigtop_custom.repo  /etc/yum.repos.d/Bigtop_custom.repo
+sudo aws s3 cp s3://vivanih-emr/bigtop/repos/bigtop_custom.repo  /etc/yum.repos.d/bigtop_custom.repo
 echo "creating application module and manifest directory"
 sudo mkdir -p /home/hadoop/bigtop/bigtop-deploy/puppet/modules/elasticsearch/manifests/
 echo "changing directory"
