@@ -1,0 +1,27 @@
+
+# full cluster creation from GitHub - compile JobServer
+aws emr create-cluster \
+--applications Name=Hadoop Name=Hive Name=Ganglia Name=Spark \
+--bootstrap-actions '[{"Path":"<your-s3-bucket>BA/full_install_jobserver_BA.sh","Name":"Custom action"}]' \
+--ec2-attributes '{"KeyName":"<your-key>","InstanceProfile":"EMR_EC2_DefaultRole","SubnetId":"<your-subnet>","EmrManagedSlaveSecurityGroup":"<your-security-group>","EmrManagedMasterSecurityGroup":"<your-security-group>"}' \
+--service-role EMR_DefaultRole --enable-debugging --release-label emr-4.7.1 --log-uri 's3n://dgraeberaws-blogs/logs/' --name 'JobServerTestFlightsFULL' \
+--instance-groups '[{"InstanceCount":5,"InstanceGroupType":"CORE","InstanceType":"m4.2xlarge","Name":"Core instance group - 2"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"m4.4xlarge","Name":"Master instance group - 1"}]' \
+--configurations '[{"Classification":"spark-defaults","Properties":{"spark.serializer":"org.apache.spark.serializer.KryoSerializer","spark.shuffle.service.enabled":"true"},"Configurations":[]},{"Classification":"spark","Properties":{"maximizeResourceAllocation":"true"},"Configurations":[]}]' \
+--region us-east-1
+
+
+
+# full cluster creation from S3 - reuse JobServer
+aws emr create-cluster \
+--applications Name=Hadoop Name=Hive Name=Zeppelin-Sandbox Name=Ganglia Name=Spark \
+--bootstrap-actions '[{"Path":"<your-s3-bucket>BA/existing_build_jobserver_BA.sh","Name":"Custom action"}]' \
+--ec2-attributes '{"KeyName":"<your-key>","InstanceProfile":"EMR_EC2_DefaultRole","SubnetId":"<your-subnet>","EmrManagedSlaveSecurityGroup":"<your-security-group>","EmrManagedMasterSecurityGroup":"<your-security-group>"}' \
+--service-role EMR_DefaultRole --enable-debugging --release-label emr-4.7.1 --log-uri 's3n://dgraeberaws-blogs/logs/' --name 'JobServerTestFlights' \
+--instance-groups '[{"InstanceCount":5,"InstanceGroupType":"CORE","InstanceType":"m4.2xlarge","Name":"Core instance group - 2"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"m4.4xlarge","Name":"Master instance group - 1"}]' \
+--configurations '[{"Classification":"spark-defaults","Properties":{"spark.serializer":"org.apache.spark.serializer.KryoSerializer","spark.shuffle.service.enabled":"true"},"Configurations":[]},{"Classification":"spark","Properties":{"maximizeResourceAllocation":"true"},"Configurations":[]}]' \
+--region us-east-1
+
+
+
+
+--steps Type=CUSTOM_JAR,Name=CustomJAR,ActionOnFailure=CONTINUE,Jar=s3://elasticmapreduce/libs/script-runner/script-runner.jar,Args=["s3://dgraeberaws-blogs/jobserver/BA/startServer.sh"]
