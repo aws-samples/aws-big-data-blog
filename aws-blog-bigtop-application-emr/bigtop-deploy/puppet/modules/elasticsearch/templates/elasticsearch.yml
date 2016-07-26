@@ -1,0 +1,7 @@
+http.port: <%= @elasticsearch_port %>
+node.master: <%= @isMaster %>
+node.data: true
+cluster.name: <%= @clusterId %>
+discovery.type: ec2
+cloud.aws.region: <%= @region %>
+discovery.ec2.tag.aws:elasticmapreduce:job-flow-id: <%= @clusterId %>
