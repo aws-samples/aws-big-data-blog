@@ -63,7 +63,7 @@ public class AmazonDynamoDBStreamstoIgnite {
 
 		@SuppressWarnings("unused")
 		Ignite ignite = Ignition.start(cfg);
-		cache = Ignition.ignite().cache("dynamocache");
+		cache = Ignition.ignite().cache(Properties.getString("cacheName"));
 		LOG.info(">>> cache acquired");
 
 		recordProcessorFactory = new StreamsRecordProcessorFactory(cache);
