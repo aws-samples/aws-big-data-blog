@@ -12,28 +12,29 @@ Install instructions for the blog post - https://blogs.aws.amazon.com/bigdata/po
 
 ## Run sample code to push data to DynamoDB
 
-vim sample/dummyOrderGenerator.py
+In ```sample/dummyOrderGenerator.py```, modify the below two lines in the python code with your region and DynamoDB table name 
 
---Modify the below two lines in the python code with your region and DynamoDB table name 
+```
 conn = boto.dynamodb.connect_to_region('<Region_Name>')
+
 table = conn.get_table('<DynamoDB_Table_Name>')
+```
 
 ## Create Lambda function using this sample code to process ddb streams
 
-vim sample/ddbStreamstoFirehose.py
+In ```sample/ddbStreamstoFirehose.py```, modify the below line in the python function and deploy it to Lambda:
 
---Modify the below line in the python function and deploy it to Lambda
+```
 DeliveryStreamName='<Firehose_Delivery_Stream_Name>'
+```
 
 ## Modify KCL code with your endpoint information
 
-vim src/main/java/com/amazon/dynamostreams/clientlibrary/StreamsToIgnite.properties
-
---Modify these lines with your information
+In ```src/main/java/com/amazon/dynamostreams/clientlibrary/StreamsToIgnite.properties```, modify these lines with your information:
 
 ```
-streamsEndpoint = streams.dynamodb.region.amazonaws.com
-streamArn = arn:aws:dynamodb:region:my-account:table/OrderDetails/stream/2016-01-16T21:59:00.129
+streamsEndpoint = streams.dynamodb.<region>.amazonaws.com
+streamArn = arn:aws:dynamodb:<region>:<my-account>:table/OrderDetails/stream/2016-01-16T21:59:00.129
 dynamodbEndpoint = dynamodb.region.amazonaws.com
 
 --Modify this with your Ignite cluster IP endpoints
@@ -49,6 +50,6 @@ initialPositionInStream = LATEST
 ```
 
 ## Compile
-mvn clean && mvn install
+```mvn clean && mvn install```
 
 
