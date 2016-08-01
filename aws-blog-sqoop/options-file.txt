@@ -1,0 +1,16 @@
+export
+-Dhadoop.security.credential.provider.path=jceks://hdfs/user/hadoop/sqoop-blog-rds.jceks
+--connect
+jdbc:mysql://sqoop-blog.c70ekihosiai.us-west-2.rds.amazonaws.com/sqoopblog
+--username
+admin
+--password-alias
+sqoop-blog-rds.password
+--table
+pv_aggregates
+--staging-table
+pv_aggregates_stg
+--fields-terminated-by
+' '
+--export-dir
+s3://your-bucket/data/sqoop/hive/pv-aggregates/

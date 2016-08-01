@@ -1,0 +1,34 @@
+######  Benchmarking  #########
+# for benchmarking with maximumResourceAllocation set
+spark-submit --deploy-mode client --master yarn --driver-memory 16G --name FlightsTest \
+--class com.amazonaws.proserv.blog.FlightsBatch jobserverEmr-1.0.jar \
+s3://us-east-1.elasticmapreduce.samples/flightdata/input/ <YOUR-S3-OUTPUT-LOCATION> 160
+
+
+
+####### For loading and querying JobServer  ###########
+
+
+
+
+curl --data-binary @jobserverEmr-1.0.jar 'localhost:8090/jars/flightsample'
+
+
+# Load a single parquet file to test
+curl -d "loc = \"s3://us-east-1.elasticmapreduce.samples/flightdata/input/f612f594-6f47-4e65-8707-253b25f03366-000000\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveLoad&context=hive-context'
+
+# Load all the data
+curl -d "loc = \"s3://us-east-1.elasticmapreduce.samples/flightdata/input\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveLoad&context=hive-context'
+
+# Query data and do not wait for a return
+curl -d "sql = \"SELECT origin, count(*) AS total_departures FROM flights WHERE year >= '2000' GROUP BY origin ORDER BY total_departures DESC LIMIT 10\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveTest&context=hive-context'
+
+# Now we want to wait for the result
+curl -d "sql = \"SELECT origin, count(*) AS total_departures FROM flights WHERE year >= '2000' GROUP BY origin ORDER BY total_departures DESC LIMIT 10\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveTest&context=hive-context&sync=true&timeout=150'
+curl -d "sql = \"SELECT origin, dest, count(*) AS total_flights FROM flights WHERE year >= '2000' GROUP BY origin, dest ORDER BY total_flights DESC LIMIT 10\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveTest&context=hive-context&sync=true&timeout=150'
+curl -d "sql = \"SELECT quarter, count(cancelled) AS total_cancellations FROM flights WHERE cancelled = '1' GROUP BY quarter ORDER BY total_cancellations DESC LIMIT 10\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveTest&context=hive-context&sync=true&timeout=150'
+curl -d "sql = \"SELECT origin, count(depdelay) as cnt FROM flights WHERE depdelay >= '15' AND year >= '2000' GROUP BY origin ORDER BY cnt DESC LIMIT 10\"" 'localhost:8090/jobs?appName=flightsample&classPath=com.amazonaws.proserv.blog.FlightsHiveTest&context=hive-context&sync=true&timeout=150'
+
+
+
+

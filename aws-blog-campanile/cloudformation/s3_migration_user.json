@@ -1,0 +1,126 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Create an IAM user for an S3 Migration",
+
+  "Parameters" : {
+    "Bucket" : {
+      "Description" : "S3 Bucket",
+      "Type" : "String"
+    },
+    
+    "Operation" : {
+      "Description" : "Read or Write",
+      "Type" : "String",
+      "AllowedValues" : [ "Read", "Write" ]
+    }
+  },
+
+  "Conditions" : {
+    "Read" : { "Fn::Equals" : [ { "Ref" : "Operation" }, "Read" ] },
+    "Write" : { "Fn::Equals" : [ { "Ref" : "Operation" }, "Write" ] }
+  },
+
+  "Resources" : {
+    "User" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path" : "/"
+      }
+    },
+
+    "AllPolicy" : {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "s3_all_policy",
+        "PolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect" : "Allow",
+              "Action" : [
+                "s3:List*",
+                "s3:GetBucketLocation"
+              ],
+              "Resource" : [
+                { "Fn::Join" : [ "", [ "arn:aws:s3:::", 
+                    { "Ref" : "Bucket" } ] ] }
+              ]
+            }
+          ]
+        },
+        "Users" : [
+          { "Ref" : "User" }
+        ]
+      }
+    },
+
+    "ReadPolicy" : {
+      "Type": "AWS::IAM::Policy",
+      "Condition" : "Read",
+      "Properties": {
+        "PolicyName": "s3_read_policy",
+        "PolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect" : "Allow",
+              "Action" : [
+                "s3:Get*"
+              ],
+              "Resource" : [
+                { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref" : "Bucket" }, 
+                    "/*" ] ] }
+              ]
+            }
+          ]
+        },
+        "Users" : [
+          { "Ref" : "User" }
+        ]
+      }
+    },
+
+    "WritePolicy" : {
+      "Type": "AWS::IAM::Policy",
+      "Condition" : "Write",
+      "Properties": {
+        "PolicyName": "s3_write_policy",
+        "PolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect" : "Allow",
+              "Action" : [
+                "s3:Put*"
+              ],
+              "Resource" : [
+                { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref" : "Bucket" }, 
+                    "/*" ] ] }
+              ]
+            }
+          ]
+        },
+        "Users" : [
+          { "Ref" : "User" }
+        ]
+      }
+    }
+  }, 
+
+  "Outputs" : {
+    "User" : {
+      "Value" : { "Ref" : "User" }
+    },
+
+    "UserKeyCreateCmd" : {
+      "Description" : "Command to create new access keys and write to .boto. Update the [profile name] accordingly",
+      "Value" : { "Fn::Join" : [ "", [ 
+        "aws iam create-access-key --user-name ", { "Ref" : "User" }, 
+          " --query '{aws_access_key_id:AccessKey.AccessKeyId,",
+          "aws_secret_access_key:AccessKey.SecretAccessKey}' --output text",
+          " | awk '{print \"[profile name]\\naws_access_key_id=\"$1\"\\n",
+          "aws_secret_access_key=\"$2\"\\n\"}' >> .boto" ] ] }
+    }
+  }
+}

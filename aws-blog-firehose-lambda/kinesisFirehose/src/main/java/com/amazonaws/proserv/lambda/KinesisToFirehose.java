@@ -17,7 +17,7 @@ public class KinesisToFirehose {
     private String firehoseEndpointURL = "https://firehose.us-east-1.amazonaws.com";
     private String deliveryStreamName = "blogfirehose";
     private String deliveryStreamRoleARN = "arn:aws:iam::<AWS Acct Id>:role/firehose_blog_role";
-    private String targetBucketARN = "arn:aws:s3::<AWS Acct Id>:dgraeberaws-blogs";
+    private String targetBucketARN = "arn:aws:s3:::dgraeberaws-blogs";
     private String targetPrefix = "blogoutput/";
     private int intervalInSec = 60;
     private int buffSizeInMB = 2;
