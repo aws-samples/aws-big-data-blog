@@ -1,0 +1,302 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Supporting elements for the Kinesis Analytics click stream example",
+
+  "Parameters" : {
+    "email": {
+      "Description" : "Email address to send anomaly detection events.",
+      "Type": "String",
+      "ConstraintDescription" : "myemail@example.com"
+    },
+    "SMS": {
+      "Description" : "Mobile Phone number to send SMS anomaly detection events.",
+      "Type": "String",
+      "ConstraintDescription" : "##########"
+    }
+  },
+
+  "Resources" : {
+    "CSEAPIGateway2KinesisRole" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "apigateway.amazonaws.com" ]
+            },
+              "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Policies": [ {
+          "PolicyName": "puttokinesisstream",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Action": [
+                  "kinesis:PutRecord",
+                  "kinesis:PutRecords"
+                ],
+                  "Resource": [
+                    { "Fn::GetAtt" : [ "CSEKinesisBeaconInputStream", "Arn" ] }
+                ]
+              }]
+            }
+        }]
+      },
+      "DependsOn" : ["CSEKinesisBeaconInputStream"]
+    },
+
+    "CSELambdaSNSPublishRole" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "lambda.amazonaws.com" ]
+            },
+              "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Policies": [ {
+          "PolicyName": "lambda_sns",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [ {
+                "Effect": "Allow",
+                "Action": [
+                  "sns:Publish"
+                ],
+                "Resource": { "Ref" : "CSEClickStreamEvent" }
+              } ]
+            }
+        } ]
+      }
+    },
+    "CSEKinesisAnalyticsRole" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "kinesisanalytics.amazonaws.com" ]
+            },
+              "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Policies": [{
+          "PolicyName": "kinesisaccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [ {
+                "Sid": "ReadInputStream",
+                "Effect": "Allow",
+                "Action": [
+                  "kinesis:DescribeStream",
+                  "kinesis:GetShardIterator",
+                  "kinesis:GetRecords"
+                ],
+                "Resource": [
+                  { "Fn::GetAtt" : [ "CSEKinesisBeaconInputStream", "Arn" ] }
+                ]
+              },
+              {
+                "Sid": "WriteOutputStram",
+                "Effect": "Allow",
+                "Action": [
+                  "kinesis:DescribeStream",
+                  "kinesis:PutRecord",
+                  "kinesis:PutRecords"
+                ],
+                "Resource": [
+                  { "Fn::GetAtt" : [ "CSEKinesisBeaconOutputStream", "Arn" ] }
+                ]
+              }]
+            }
+        } ]
+      }
+    },
+    "CSEClickStreamEvent" : {
+      "Type" : "AWS::SNS::Topic",
+      "Properties" : {
+        "DisplayName" : "ClkStrEvt",
+        "Subscription" : [ 
+          { "Endpoint" : { "Ref" : "email"}, "Protocol" : "email" }, 
+          { "Endpoint" : { "Ref" : "SMS"}, "Protocol" : "sms" }
+        ],
+        "TopicName" : "ClickStreamEvent"
+      }
+    },
+    "CSEKinesisBeaconInputStream" : {
+      "Type" : "AWS::Kinesis::Stream",
+      "Properties" : {
+        "ShardCount" : 1
+      }
+    },
+    "CSEAPIGatewayBeaconStream" : {
+      "Type" : "AWS::ApiGateway::RestApi",
+      "Properties" : {
+          "Body" : 
+            { "Fn::Join" : [ "", [ 
+              "{\"swagger\": \"2.0\",\"info\": {\"version\": \"2016-05-03T18:49:59Z\",\"title\": \"CSEAPIGatewayBeaconStream\"},\"basePath\": \"/example\",\"schemes\": [\"https\"],\"paths\": {\"/beacon/stream\": {\"get\": {\"consumes\": [\"application/json\"],\"produces\": [\"application/json\"],\"parameters\": [{\"name\": \"Host\",\"in\": \"header\",\"required\": false,\"type\": \"string\"},{\"name\": \"browseraction\",\"in\": \"query\",\"required\": false,\"type\": \"string\"},{\"in\": \"body\",\"name\": \"BeaconRequest\",\"required\": true,\"schema\": {\"$ref\": \"#/definitions/BeaconRequest\"}}],\"responses\": {\"200\": {\"description\": \"200 response\",\"schema\": {\"$ref\": \"#/definitions/Empty\"}}},\"x-amazon-apigateway-integration\": {\"credentials\":\"",  
+              { "Fn::GetAtt" : [ "CSEAPIGateway2KinesisRole", "Arn" ] } ,
+              "\", \"responses\": {\"default\": {\"statusCode\": \"200\"}},\"requestParameters\": {\"integration.request.querystring.browseraction\": \"method.request.querystring.browseraction\",\"integration.request.header.Host\": \"method.request.header.Host\"},\"passthroughBehavior\": \"when_no_match\",\"httpMethod\": \"POST\",\"uri\": \"arn:aws:apigateway:us-east-1:kinesis:action/PutRecord\",\"requestTemplates\": {\"application/json\": \"#set($inputRoot = $input.path('$'))\\n{\\n  \\\"Data\\\": \\\"$util.base64Encode(\\\"{ \\\"\\\"browseraction\\\"\\\" : \\\"\\\"$input.params('browseraction')\\\"\\\", \\\"\\\"site\\\"\\\" : \\\"\\\"$input.params('Host')\\\"\\\" }\\\")\\\",\\n  \\\"PartitionKey\\\" : \\\"shardId-000000000\\\",\\n  \\\"StreamName\\\" : \\\"",
+              { "Ref" : "CSEKinesisBeaconInputStream" },
+              "\\\"\\n}\"},\"type\": \"aws\"}}}},\"definitions\": {\"Empty\": {\"type\": \"object\"},\"BeaconRequest\": {\"type\": \"object\",\"properties\": {\"browseraction\": {\"type\": \"string\",\"description\": \"Querystring variable\"},\"Host\": {\"type\": \"string\",\"description\": \"Header variable\"}},\"description\": \"Sample incoming request from client\"}}}" 
+            ] ] },
+          "Description" : "Kinesis Example API Gateway RestAPI",
+          "Name" : "CSEBeaconAPI"
+      }
+    },
+    "CSEAPIGatewayBeaconStreamDeployment" : {
+      "Type" : "AWS::ApiGateway::Deployment",
+      "Properties" : {
+        "Description" : "Click Stream Example deployment",
+        "RestApiId" : { "Ref" : "CSEAPIGatewayBeaconStream" },
+        "StageName" : "dummy"
+      }
+    },
+    "CSEAPIGatewayBeaconStreamExampleStage" : {
+        "Type" : "AWS::ApiGateway::Stage",
+        "Properties" : {
+            "CacheClusterEnabled" : false,
+            "DeploymentId" : { "Ref" : "CSEAPIGatewayBeaconStreamDeployment" },
+            "Description" : "Click Stream Example API Gateway Stage",
+            "RestApiId" : { "Ref" : "CSEAPIGatewayBeaconStream" },
+            "StageName" : "example"
+        }
+    },
+    "CSEKinesisBeaconOutputStream" : {
+      "Type" : "AWS::Kinesis::Stream",
+      "Properties" : {
+        "ShardCount" : 1
+      }
+    },
+    "LambdaExecutionRole" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "lambda.amazonaws.com" ]
+            },
+              "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Policies": [ {
+          "PolicyName": "CSELambdaExecutionRole",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Sid" : "publish2sns",
+                "Effect": "Allow",
+                "Action": [
+                  "sns:Publish"
+                ],
+                  "Resource": [
+                    { "Ref" :  "CSEClickStreamEvent" }
+                ]
+              },
+              {
+                "Sid" : "writelogs",
+                "Effect": "Allow",
+                "Action": [
+                  "logs:CreateLogGroup",
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+                ],
+                "Resource": "arn:aws:logs:*:*:*"
+              },
+              {
+                "Sid" : "readkinesis",
+                "Effect": "Allow",
+                "Action": [
+                  "kinesis:DescribeStream",
+                  "kinesis:GetRecords",
+                  "kinesis:GetShardIterator",
+                  "kinesis:ListStreams"
+                ],
+                "Resource": "*"
+              }]
+            }
+        }]
+      }
+    },
+    "CSEBeconAnomalyResponse" : {
+      "Type" : "AWS::Lambda::Function",
+      "Properties" : {
+        "Code" :  { 
+          "ZipFile":  { "Fn::Join": ["", [
+            "var AWS = require('aws-sdk');\n",
+            "var sns = new AWS.SNS( { region: \"",
+            { "Ref" : "AWS::Region" },
+            "\" });\n",
+            "\texports.handler = function(event, context) {\n",
+            "\t//our batch size is 1 record so loop expected to process only once\n",
+            "\tevent.Records.forEach(function(record) {\n",
+            "\t\t// Kinesis data is base64 encoded so decode here\n",
+            "\t\tvar payload = new Buffer(record.kinesis.data, 'base64').toString('ascii');\n",
+            "\t\tvar rec = payload.split(',');\n",
+            "\t\tvar ctr = rec[0];\n",
+            "\t\tvar anomaly_score = rec[1];\n",
+            "\t\tvar detail = 'Anomaly detected with a click through rate of ' + ctr + '% and an anomaly score of ' + anomaly_score;\n",
+            "\t\tvar subject = 'Anomaly Detected';\n",
+            "\t\tvar params = {\n",
+            "\t\t\tMessage: detail,\n",
+            "\t\t\tMessageStructure: 'String',\n",
+            "\t\t\tSubject: subject,\n",
+            "\t\t\tTopicArn: '",
+            { "Ref" : "CSEClickStreamEvent" },
+            "'\n",
+            "\t\t};\n",
+            "\t\tsns.publish(params, function(err, data) {\n",
+            "\t\t\tif (err) context.fail(err.stack);\n",
+            "\t\t\telse     context.succeed('Published Notification');\n",
+            "\t\t});\n",
+            "\t});\n",
+            "};\n"
+          ]]}
+        },
+        "Description" : "Click Stream Example Lambda Function",
+        "FunctionName" : "CSEBeconAnomalyResponse",
+        "Handler" : "index.handler",
+        "MemorySize" : 128,
+        "Role" :  { "Fn::GetAtt" : [ "LambdaExecutionRole", "Arn" ] } ,
+        "Runtime" : "nodejs4.3",
+        "Timeout" : 5
+      }
+    },
+    "LambdaEventTrigger" : {
+      "Type" : "AWS::Lambda::EventSourceMapping",
+      "Properties" : {
+        "BatchSize" : 1,
+        "Enabled" : true,
+        "EventSourceArn" : { "Fn::GetAtt" : ["CSEKinesisBeaconOutputStream","Arn"] },
+        "StartingPosition" : "LATEST",
+        "FunctionName" : { "Fn::GetAtt" : ["CSEBeconAnomalyResponse" , "Arn"] }
+      }
+    }
+  },
+  "Outputs" :{
+    "ExecutionCommand" : { 
+        "Description" : "command line to test analytis pipeline",
+        "Value" : { "Fn::Join" : ["",[ 
+            "python ClickImpressionGenerator.py https://",
+            { "Ref" : "CSEAPIGatewayBeaconStream" },
+            ".execute-api.",
+            { "Ref" : "AWS::Region" },
+            ".amazonaws.com/",
+            "example/beacon/stream"
+        ]]}
+    }
+  }
+}
