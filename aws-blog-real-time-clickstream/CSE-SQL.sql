@@ -46,5 +46,10 @@ CREATE OR REPLACE PUMP "OUTPUT_PUMP" STARTED AS
 INSERT INTO "DESTINATION_SQL_STREAM" 
 SELECT STREAM * FROM
 TABLE (RANDOM_CUT_FOREST( 
-             CURSOR(SELECT STREAM "CTR" FROM "CTRSTREAM"),256,12,120,1)
-);
+             CURSOR(SELECT STREAM "CTR" FROM "CTRSTREAM"), --inputStream
+             100, --numberOfTrees (default)
+             12, --subSampleSize 
+             100000, --timeDecay (default)
+             1) --shingleSize (default)
+)
+WHERE ANOMALY_SCORE > 2;
