@@ -24,7 +24,7 @@ args = parser.parse_args()
 i = 0
 while (i < 2500):
 	httpGetImpression()
-	if(i<1200 or i>=1300):
+	if(i<1950 or i>=2000):
 		clicked = getClicked(.1)
 		sys.stdout.write('_')
 	else:
