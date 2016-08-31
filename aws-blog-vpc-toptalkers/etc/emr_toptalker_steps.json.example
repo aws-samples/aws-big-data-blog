@@ -1,0 +1,32 @@
+[
+  {
+    "Name": "flowlogs-aggregate",
+    "Type": "STREAMING",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
+    "Args": [
+      "-files", "s3://aws-big-data-blog/vpc-toptalkers/flowlogs-counter.py",
+      "-mapper", "flowlogs-counter.py",
+      "-reducer", "aggregate",
+      "-input", "s3://<bucket>/flowlogs",
+      "-output","s3://<bucket>/aggregate"
+    ]
+  },
+  {
+    "Name" : "flowlogs-sort",
+    "Type": "STREAMING",
+    "ActionOnFailure": "CONTINUE",
+    "Args" : [
+      "-D", "mapreduce.job.reduces=1",
+      "-D", "mapreduce.output.fileoutputformat.compress=true",
+      "-D", "mapreduce.output.fileoutputformat.compress.codec=org.apache.hadoop.io.compress.GzipCodec",
+      "-D", "mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator",
+      "-D", "stream.num.map.output.key.fields=2",
+      "-D", "mapreduce.partition.keycomparator.options=-k2,2nr",
+      "-files", "s3://aws-big-data-blog/vpc-toptalkers/portfilter.awk",
+      "-mapper", "portfilter.awk",
+      "-reducer", "cat",
+      "-input", "s3://<bucket>/aggregate",
+      "-output", "s3://<bucket>/toptalker"
+    ]
+  }
+]
