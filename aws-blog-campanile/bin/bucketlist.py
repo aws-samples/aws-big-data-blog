@@ -52,7 +52,8 @@ def main():
             if key.storage_class == 'GLACIER':
                 continue 
 
-            print "%s\t%s\t%s\t%s" % (key.name, key.etag.replace("\"", ""), 
+            print "%s\t%s\t%s\t%s" % (key.name.encode('utf-8'), 
+                    key.etag.replace("\"", ""), 
                     key.size, parse_ts(key.last_modified))
 
             ## Log stats

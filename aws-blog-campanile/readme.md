@@ -117,15 +117,14 @@ Campanile relies heavily on the [NLineInputFormat](https://hadoop.apache.org/doc
 
     ## campanile.py provides and index function
     ## Note reducers don't get an index
-    def stream_index():    
-    try:
-        if os.environ['mapred_input_format_class'] == \
-                'org.apache.hadoop.mapred.lib.NLineInputFormat':
-            if os.environ['mapreduce_task_ismap'] == "true":
+    def stream_index():
+        try:
+            if os.environ['mapred_input_format_class'] == \
+                'org.apache.hadoop.mapred.lib.NLineInputFormat' and \
+                os.environ['mapreduce_task_ismap'] == "true":
                 return 1
-            else:
-                return 0
-    except:
+        except:
+            pass
         return 0
 
     

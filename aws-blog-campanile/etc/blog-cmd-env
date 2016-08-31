@@ -3,18 +3,18 @@
 export AWS_DEFAULT_REGION=
 
 ##  Admin profiles
-$ ADMIN_ACCOUNT1=
-$ ADMIN_ACCOUNT2=
+ADMIN_ACCOUNT1=
+ADMIN_ACCOUNT2=
 
 ## Buckets created below
-$ SRC_BUCKET=
-$ DST_BUCKET=
-$ CODE_BUCKET=
+SRC_BUCKET=
+DST_BUCKET=
+CODE_BUCKET=
 
 ## Region of buckets created below 
-$ SRC_ENDPOINT=
-$ DST_ENDPOINT=
+SRC_ENDPOINT=
+DST_ENDPOINT=
 
 ## Source and destination profiles created in section IAM Users
-$ SRC_PROFILE=
-$ DST_PROFILE=
+SRC_PROFILE=
+DST_PROFILE=
