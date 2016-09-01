@@ -1,0 +1,31 @@
+aws ec2 describe-vpcs --query 'Vpcs[*].{CidrBlock:CidrBlock,VpcId:VpcId,DefaultVPC:IsDefault}'
+
+aws ec2 describe-subnets --filters Name=vpc-id,Values=vpc-yourvpcid
+
+aws ec2 describe-security-groups --filters Name=group-name,Values=ElasticMapReduce* Name=vpc-id,Values=vpc-yourvpcid --query 'SecurityGroups[*].{Name:GroupName,VpcId:VpcId,GroupId:GroupId}'
+
+aws emr create-cluster --termination-protected --applications Name=Hadoop Name=Hive Name=Hue Name=Sqoop-Sandbox --tags 'Purpose=Sqoop-Blog' --ec2-attributes '{"KeyName”:”keyname”,”InstanceProfile":"EMR_EC2_DefaultRole","SubnetId":"subnet-yoursubnetid”,”EmrManagedSlaveSecurityGroup":"sg-masterid”,”EmrManagedMasterSecurityGroup":"sg-slaveid”}’ --service-role EMR_DefaultRole --enable-debugging --release-label emr-4.5.0 --log-uri 's3n://your-bucket/logs/sqoop/' --name 'Sqoop-Demo' --instance-groups '[{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"m3.xlarge","Name":"Master instance group - 1"},{"InstanceCount":2,"InstanceGroupType":"CORE","InstanceType":"m3.xlarge","Name":"Core instance group - 2"}]' --region us-west-2
+
+aws emr ssh --cluster-id j-yourclusterid --key-pair-file ~/Downloads/keyname.pem --region us-west-2
+
+aws rds create-db-subnet-group --db-subnet-group-name sqoop-blog --db-subnet-group-description sqoop-blog --subnet-ids subnet-yoursubnetid1 subnet-yoursubnetid2 subnet-yoursubnetid3 --tags Key=Purpose,Value=Blog
+
+aws ec2 create-security-group --group-name blog-rds --description "SG for Sqoop Blog" --vpc-id vpc-yourvpcid
+
+aws ec2 authorize-security-group-ingress --group-id sg-yoursecuritygroup --protocol tcp --port 3306 --source-group sg-masterid
+
+aws ec2 authorize-security-group-ingress --group-id sg-yoursecuritygroup --protocol tcp --port 3306 --source-group sg-slaveid
+
+aws rds create-db-instance --db-instance-identifier sqoop-blog  --db-instance-class db.t1.micro --engine MySQL --db-name  sqoopblog --db-subnet-group-name sqoop-blog --vpc-security-group-ids sg-yoursecuritygroup --allocated-storage 5 --backup-retention-period 0 --master-username admin --master-user-password your-password
+
+aws rds describe-db-instances --db-instance-identifier sqoop-blog
+
+
+hadoop credential create sqoop-blog-rds.password -provider jceks://hdfs/user/hadoop/sqoop-blog-rds.jceks
+
+sqoop export -Dhadoop.security.credential.provider.path=jceks://hdfs/user/hadoop/sqoop-blog-rds.jceks --connect jdbc:mysql://sqoop-blog.c70ekihosiai.us-west-2.rds.amazonaws.com/sqoopblog --username admin --password-alias sqoop-blog-rds.password --table pv_aggregates --fields-terminated-by ' ' --export-dir s3://your-bucket/data/sqoop/hive/pv-aggregates/ 
+
+
+===Delete Commands=====
+
+aws rds delete-db-instance --db-instance-identifier sqoop-blog --skip-final-snapshotaws ec2 delete-security-group --group-name blog-rdsaws rds delete-db-subnet-group --db-subnet-group-name sqoop-blogaws emr modify-cluster-attributes --cluster-id j-your-clusterid --no-termination-protectedaws emr terminate-clusters --cluster-ids j-your-clusterid

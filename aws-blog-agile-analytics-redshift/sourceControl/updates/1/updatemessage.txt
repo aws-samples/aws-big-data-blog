@@ -1,0 +1,3 @@
+alter table message
+add column feedback_score int
+default NULL;

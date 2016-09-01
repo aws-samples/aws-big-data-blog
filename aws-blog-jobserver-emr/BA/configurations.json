@@ -1,0 +1,16 @@
+[
+  {
+    "classification" : "spark-defaults",
+    "properties" : {
+      "spark.serializer"                  : "org.apache.spark.serializer.KryoSerializer",
+      "spark.shuffle.service.enabled"     : "true",
+      "spark.yarn.executor.memoryOverhead": "1024"
+    }
+  },
+  {
+    "Classification" : "spark",
+    "Properties" : {
+      "maximizeResourceAllocation" : "true"
+    }
+  }
+]

@@ -1,0 +1,355 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  
+  "Description" : "AWS CloudFormation Template: Zeppelin_Yarn_Client: Create a Zeppelin EC2 instance. This template demonstrates using the AWS CloudFormation bootstrap scripts to install Maven, Git, Apache Spark and Apache Zeppelin  at instance launch time. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
+  
+  "Parameters" : {
+      
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    },    
+
+
+    "InstanceType" : {
+      "Description" : "Zeppelin EC2 instance type",
+      "Type" : "String",
+      "Default" : "m3.xlarge",
+      "AllowedValues" : [ "t2.small", "t2.medium", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "g2.2xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "Must be a valid EC2 instance type"
+    },
+     "EMRMasterSecurityGroup": {
+      "Description" : "Name of an existing EMR Master Security Group",
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    }, 
+     "EMRSlaveSecurityGroup": {
+      "Description" : "Name of an existing EMR Master Security Group",
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    },
+      "S3HadoopConfFolder": {
+      "Description" : "S3 bucket and folder which contains your hadoop conf directory",
+      "Type": "String",
+      "Default":"mybucket/hadoopconf"
+        },
+      "S3HiveConfFolder": {
+      "Description" : "S3 bucket and folder which contains your hive conf directory",
+      "Type": "String",
+      "Default":"mybucket/hiveconf"
+        },
+    "ZeppelinSubnetId": {
+      "Description" : "Choose a subnet to launch your Zeppelin Instance",
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "ZeppelinVPCId": {
+      "Description" : "Choose a VPC to launch your Zeppelin Instance",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "ZeppelinAccessLocation" : {
+      "Description" : "The IP address range that can be used to access Zeppelin on port 8080",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x"
+    },
+    "SSHLocation" : {
+      "Description" : "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x"
+    } 
+  },
+  
+  "Mappings" : {
+    "AWSInstanceType2Arch" : {
+      "t2.small"    : { "Arch" : "HVM64"  },
+      "t2.medium"   : { "Arch" : "HVM64"  },
+      "m1.small"    : { "Arch" : "PV64"   },
+      "m1.medium"   : { "Arch" : "PV64"   },
+      "m1.large"    : { "Arch" : "PV64"   },
+      "m1.xlarge"   : { "Arch" : "PV64"   },
+      "m2.xlarge"   : { "Arch" : "PV64"   },
+      "m2.2xlarge"  : { "Arch" : "PV64"   },
+      "m2.4xlarge"  : { "Arch" : "PV64"   },
+      "m3.medium"   : { "Arch" : "HVM64"  },
+      "m3.large"    : { "Arch" : "HVM64"  },
+      "m3.xlarge"   : { "Arch" : "HVM64"  },
+      "m3.2xlarge"  : { "Arch" : "HVM64"  },
+      "c1.medium"   : { "Arch" : "PV64"   },
+      "c1.xlarge"   : { "Arch" : "PV64"   },
+      "c3.large"    : { "Arch" : "HVM64"  },
+      "c3.xlarge"   : { "Arch" : "HVM64"  },
+      "c3.2xlarge"  : { "Arch" : "HVM64"  },
+      "c3.4xlarge"  : { "Arch" : "HVM64"  },
+      "c3.8xlarge"  : { "Arch" : "HVM64"  },
+      "g2.2xlarge"  : { "Arch" : "HVMG2"  },
+      "r3.large"    : { "Arch" : "HVM64"  },
+      "r3.xlarge"   : { "Arch" : "HVM64"  },
+      "r3.2xlarge"  : { "Arch" : "HVM64"  },
+      "r3.4xlarge"  : { "Arch" : "HVM64"  },
+      "r3.8xlarge"  : { "Arch" : "HVM64"  },
+      "i2.xlarge"   : { "Arch" : "HVM64"  },
+      "i2.2xlarge"  : { "Arch" : "HVM64"  },
+      "i2.4xlarge"  : { "Arch" : "HVM64"  },
+      "i2.8xlarge"  : { "Arch" : "HVM64"  },
+      "hi1.4xlarge" : { "Arch" : "HVM64"  },
+      "hs1.8xlarge" : { "Arch" : "HVM64"  },
+      "cr1.8xlarge" : { "Arch" : "HVM64"  },
+      "cc2.8xlarge" : { "Arch" : "HVM64"  }
+    },
+
+    "AWSRegionArch2AMI" : {
+      "us-east-1"      : { "PV64" : "ami-50842d38", "HVM64" : "ami-08842d60", "HVMG2" : "ami-3a329952"  },
+      "us-west-2"      : { "PV64" : "ami-af86c69f", "HVM64" : "ami-8786c6b7", "HVMG2" : "ami-47296a77"  },
+      "us-west-1"      : { "PV64" : "ami-c7a8a182", "HVM64" : "ami-cfa8a18a", "HVMG2" : "ami-331b1376"  },
+      "eu-west-1"      : { "PV64" : "ami-aa8f28dd", "HVM64" : "ami-748e2903", "HVMG2" : "ami-00913777"  },
+      "ap-southeast-1" : { "PV64" : "ami-20e1c572", "HVM64" : "ami-d6e1c584", "HVMG2" : "ami-fabe9aa8"  },
+      "ap-northeast-1" : { "PV64" : "ami-21072820", "HVM64" : "ami-35072834", "HVMG2" : "ami-5dd1ff5c"  },
+      "ap-southeast-2" : { "PV64" : "ami-8b4724b1", "HVM64" : "ami-fd4724c7", "HVMG2" : "ami-e98ae9d3"  },
+      "sa-east-1"      : { "PV64" : "ami-9d6cc680", "HVM64" : "ami-956cc688", "HVMG2" : "NOT_SUPPORTED" },
+      "cn-north-1"     : { "PV64" : "ami-a857c591", "HVM64" : "ami-ac57c595", "HVMG2" : "NOT_SUPPORTED" },
+      "eu-central-1"   : { "PV64" : "ami-a03503bd", "HVM64" : "ami-b43503a9", "HVMG2" : "ami-b03503ad"  }
+    }
+
+  },
+    
+  "Resources" : {     
+      
+    "ZeppelinInstance": {  
+      "Type": "AWS::EC2::Instance",
+      "Metadata" : {
+        "AWS::CloudFormation::Interface" : {
+          "ParameterGroups" : [
+           {
+             "Label" : { "default" : "Network Configuration" },
+             "Parameters" : [ "ZeppelinVPCID", "ZeppelinSubnetId", "EMRMasterSecurityGroup", "EMRMasterSlaveGroup" ]
+            },
+          {
+             "Label" : { "default":"Amazon EC2 Configuration" },
+             "Parameters" : [ "InstanceType", "KeyName" ]
+            }
+            ],
+          "ParameterLabels" : {
+            "ZeppelinVPCID" : { "default" : "Which VPC should this be deployed to?" }
+              }
+          },
+
+        "AWS::CloudFormation::Init" : {
+          "configSets" : {
+            "InstallAndRun" : [ "Install", "Configure" ]
+          },
+
+          "Install" : {
+            "packages" : {
+              "yum" : {
+                "git"          : [],
+                "java-1.7.0-openjdk-devel.x86_64": []
+              }
+            },
+             "sources": {
+		"/home/ec2-user/prereqs/": "https://s3.amazonaws.com/aws-bigdata-blog/artifacts/spark-1.6.1-bin-hadoop2.6.tgz"
+		},
+              "commands" : {
+              "01-install-git" : {
+              "command" : "git clone https://github.com/apache/incubator-zeppelin /home/ec2-user/zeppelin",       
+              "ignoreErrors" : "true"
+                },
+              "02-maven-step1": {
+             "command" : "wget http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo",       
+              "ignoreErrors" : "true"
+                },
+             "03-maven-step2": {
+             "command" : "sed -i s/\\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo",       
+              "ignoreErrors" : "true"
+                }, 
+              "04-download_hadoopconf" : {
+              "command" : { "Fn::Join" : ["", ["aws s3 sync s3://", { "Ref" : "S3HadoopConfFolder" }, " ", "/home/ec2-user/hadoopconf"]]},
+              "ignoreErrors" : "true"                           
+              },               
+              "05-download_hive-site.xml" : {
+              "command" : { "Fn::Join" : ["", ["aws s3 cp s3://", { "Ref" : "S3HiveConfFolder" },"/hive-site.xml", " ", "/home/ec2-user/zeppelin/conf/hive-site.xml"]]},
+              "ignoreErrors" : "true"                           
+              } 
+             },  
+            "files" : {
+              "/etc/cfn/cfn-hup.conf" : {
+                "content" : { "Fn::Join" : ["", [
+                  "[main]\n",
+                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
+                  "region=", { "Ref" : "AWS::Region" }, "\n"
+                ]]},
+                "mode"    : "000400",
+                "owner"   : "root",
+                "group"   : "root"
+              },
+
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
+                "content": { "Fn::Join" : ["", [
+                  "[cfn-auto-reloader-hook]\n",
+                  "triggers=post.update\n",
+                  "path=Resources.ZeppelinInstance.Metadata.AWS::CloudFormation::Init\n",
+                  "action=/opt/aws/bin/cfn-init -v ",
+                  "         --stack ", { "Ref" : "AWS::StackName" },
+                  "         --resource ZeppelinInstance ",
+                  "         --configsets InstallAndRun ",
+                  "         --region ", { "Ref" : "AWS::Region" }, "\n",
+                  "runas=root\n"
+                ]]}
+              }
+            },
+           
+            "services" : {
+              "sysvinit" : {  
+                "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
+                              "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
+              }
+            }
+          },
+
+          "Configure" : {
+             "packages" : {
+              "yum" : {
+                "apache-maven"          : []
+              }
+            },
+            
+            "files" : {
+            "/home/ec2-user/prereqs/spark-1.6.1-bin-hadoop2.6/conf/spark-env.sh": {
+            "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/emr_versions/4.5/conf/spark-env.sh",
+            "mode": "000644",
+            "owner" : "root",
+            "group" : "root"
+            },
+             "/home/ec2-user/zeppelin/conf/zeppelin-env.sh": {
+             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/emr_versions/4.5/conf/zeppelin-env.sh",
+             "mode": "000644",
+            "owner" : "root",
+            "group" : "root"
+             },
+             "/home/ec2-user/zeppelin/conf/zeppelin-site.xml": {
+             "source" : "https://raw.githubusercontent.com/awslabs/aws-big-data-blog/master/aws-blog-zeppelin-yarn-on-ec2/emr_versions/4.5/conf/zeppelin-site.xml",
+             "mode": "000644",
+            "owner" : "root",
+            "group" : "root"
+             }
+           },
+
+            "commands" : {
+              "01_change_owner_zeppelin" : {
+              "command" : "chown -R ec2-user /home/ec2-user/zeppelin",       
+              "ignoreErrors" : "true"
+              },
+              "02_build_zeppelin" : {
+              "command" : "cd /home/ec2-user/zeppelin; mvn clean package -Pspark-1.6 -Dspark.version=1.6.1 -Phadoop-2.6 -Dhadoop.version=2.7.1 -Pyarn -DskipTests",       
+              "ignoreErrors" : "true"
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                          { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
+        "InstanceType"   : { "Ref" : "InstanceType" },
+        "KeyName"        : { "Ref" : "KeyName" },
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "ZeppelinSecurityGroup" }],
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Ref" : "ZeppelinSubnetId" }
+        }],
+        "IamInstanceProfile": {
+               "Ref": "MyInstanceProfile"
+            },
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "echo 'export JAVA_HOME=/etc/alternatives/java_sdk' >> /home/ec2-user/.bash_profile\n",
+             "echo 'export PATH=$PATH:$JAVA_HOME/bin' >> /home/ec2-user/.bash_profile\n",
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ZeppelinInstance ",
+             "         --configsets InstallAndRun ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n",
+             "# Signal the status from cfn-init\n",
+             "/opt/aws/bin/cfn-signal -e $? ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource ZeppelinInstance ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n"
+        ]]}}        
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT30M"
+        }
+      }
+    },
+      "MyRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "ec2.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/"
+         }
+      },
+      "RolePolicies": {
+         "Type": "AWS::IAM::Policy",
+         "Properties": {
+            "PolicyName": "s3access",
+            "PolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Action": "s3:*",
+                  "Resource": "*"
+               } ]
+            },
+            "Roles": [ { "Ref": "MyRole" } ]
+         }
+      },
+      "MyInstanceProfile": {
+         "Type": "AWS::IAM::InstanceProfile",
+         "Properties": {
+            "Path": "/",
+            "Roles": [ { "Ref": "MyRole" } ]
+         }
+      },    
+    "ZeppelinSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable access to Zeppelin over port 8080, access to EMR cluster through EMRMaster and EMRSlave Security Groups",
+        "VpcId" : { "Ref" : "ZeppelinVPCId" },
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "CidrIp" : { "Ref" : "ZeppelinAccessLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "EMRMasterSecurityGroup"}},
+          {"IpProtocol" : "tcp", "FromPort" : "0", "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "EMRSlaveSecurityGroup"}},
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}}
+        ]
+      }      
+    }          
+  },
+  
+  "Outputs" : {
+    "WebsiteURL" : {
+      "Description" : "URL for newly created Zeppelin stack",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "ZeppelinInstance", "PublicDnsName"]},":8080"]] }
+    }
+  }
+}

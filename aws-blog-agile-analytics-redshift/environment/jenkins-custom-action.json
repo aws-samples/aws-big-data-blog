@@ -1,0 +1,26 @@
+{
+    "category": "Test",
+    "provider": "JenkinsCustomAction",
+    "version": "1",
+    "settings": {
+        "entityUrlTemplate": "http://< Jenkins URL >/job/{Config:ProjectName}/",
+        "executionUrlTemplate": "http://< Jenkins URL >/job/{Config:ProjectName}/lastSuccessfulBuild/{ExternalExecutionId}/"
+    },
+    "configurationProperties": [{
+        "name": "ProjectName",
+        "required": true,
+        "key": true,
+        "secret": false,
+        "queryable": true,
+        "description": "Custom action to run a test Jenkins Job.",
+        "type": "String"
+    }],
+    "inputArtifactDetails": {
+        "maximumCount": 5,
+        "minimumCount": 0
+    },
+    "outputArtifactDetails": {
+        "maximumCount": 5,
+        "minimumCount": 0
+    }
+}
