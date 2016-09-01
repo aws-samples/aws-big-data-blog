@@ -61,13 +61,12 @@ def cli_chunksize(size, current_chunksize=DEFAULTS['multipart_chunksize']):
 def stream_index():
     try:
         if os.environ['mapred_input_format_class'] == \
-                'org.apache.hadoop.mapred.lib.NLineInputFormat':
-            if os.environ['mapreduce_task_ismap'] == "true":
-                return 1
-            else:
-                return 0
+                'org.apache.hadoop.mapred.lib.NLineInputFormat' and \
+                os.environ['mapreduce_task_ismap'] == "true":
+            return 1
     except:
-        return 0
+        pass
+    return 0
 
 def counter(group, counter, amount):
     stderr.write("reporter:counter:%s,%s,%s\n" % (group, counter, amount))

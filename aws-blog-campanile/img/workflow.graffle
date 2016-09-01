@@ -3203,7 +3203,7 @@ SRC}</string>
 			</dict>
 		</array>
 		<key>Frame</key>
-		<string>{{170, 47}, {1280, 731}}</string>
+		<string>{{0, 35}, {1280, 731}}</string>
 		<key>ListView</key>
 		<true/>
 		<key>OutlineWidth</key>
@@ -3217,7 +3217,7 @@ SRC}</string>
 		<key>SidebarWidth</key>
 		<integer>120</integer>
 		<key>VisibleRegion</key>
-		<string>{{-187, 318.5}, {1131, 592}}</string>
+		<string>{{-187, 317}, {1131, 592}}</string>
 		<key>Zoom</key>
 		<real>1</real>
 		<key>ZoomValues</key>

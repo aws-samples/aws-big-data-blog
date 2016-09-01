@@ -85,6 +85,9 @@ for i in `attached_devices "ephemeral"`; do
     else
         mnts+=",$mp"
     fi
+    
+    ## Add hadoop group w permissions 
+    chmod 775 $mp
 done
 
 ## Set default boto options
