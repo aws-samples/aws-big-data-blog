@@ -1,0 +1,109 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.amazonaws.bigdatablog</groupId>
+  <artifactId>eventdrivenbatchanalytics</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>eventdrivenbatchanalytics</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+<dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+ <dependency>
+    	<groupId>
+    		com.amazonaws
+    	</groupId>
+    	<artifactId>aws-lambda-java-core</artifactId>
+    	<version>1.1.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.amazonaws</groupId>
+    	<artifactId>aws-lambda-java-events</artifactId>
+    	<version>1.1.0</version>
+    </dependency>
+    <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>1.10.58</version>
+    </dependency>
+    <dependency>
+		<groupId>com.amazonaws</groupId>
+		<artifactId>aws-java-sdk-emr</artifactId>
+		<version>1.10.58</version>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.commons</groupId>
+	  <artifactId>commons-csv</artifactId>
+	  <version>1.0</version>
+</dependency>	
+	<dependency>
+		<groupId>mysql</groupId>
+		<artifactId>mysql-connector-java</artifactId>
+		<version>5.1.38</version>
+	</dependency>
+	<!-- http://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sns -->
+	<dependency>
+		<groupId>org.apache.spark</groupId>
+		<artifactId>spark-core_2.10</artifactId>
+		<version>1.6.0</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.spark</groupId>
+		<artifactId>spark-sql_2.10</artifactId>
+		<version>1.6.0</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.databricks</groupId>
+		<artifactId>spark-redshift_2.10</artifactId>
+		<version>0.6.1</version>
+	</dependency>
+	<dependency>
+		<groupId>com.amazon</groupId>
+		<artifactId>redshift</artifactId>
+		<version>1.1.13</version>
+	</dependency>
+	<dependency>
+		<groupId>com.amazonaws</groupId>
+		<artifactId>aws-java-sdk-sts</artifactId>
+		<version>1.9.6</version>
+	</dependency>
+	<dependency>
+		<groupId>com.amazonaws</groupId>
+		<artifactId>aws-java-sdk-s3</artifactId>
+		<version>1.10.58</version>
+	</dependency>
+  </dependencies>
+  <build>
+  	<plugins>
+  			<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>2.3.2</version>
+					<configuration>
+						<source>1.7</source>
+						<target>1.7</target>
+					</configuration>
+		</plugin>
+  		<plugin>
+  			<groupId>org.apache.maven.plugins</groupId>
+  			<artifactId>maven-shade-plugin</artifactId>
+  			<version>2.3</version>
+  		</plugin>
+  	</plugins>
+  </build>
+
+</project>
