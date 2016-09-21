@@ -1,0 +1,381 @@
+{  
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"AWS CloudFormation Template: This template creates 1 Kafka Zookeeper and 1 Kafka Broker instances",
+   "Parameters":{  
+       "VPCId":{  
+         "Type":"AWS::EC2::VPC::Id",
+         "Description":"VpcId of existing Virtual Private Cloud (VPC)"
+      },
+      "SubnetID": {
+         "Description": "Subnet ID in your Virtual Private Cloud (VPC) for Zookeepers and Kafka Brokers",
+         "Type":"AWS::EC2::Subnet::Id"
+      },
+      "SubnetCIDR": {
+         "Description": "CIDR Block for Public Subnet where Zookeepers and Kafka Brokers will be deployed. ex:10.0.0.0/24",
+         "Type": "String",
+         "MinLength": "9",
+         "MaxLength": "18",
+         "Default": "10.0.0.0/24",
+         "AllowedPattern": "[a-zA-Z0-9]+\\..+"
+      },
+      "KeyName":{  
+         "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instances",
+         "Type":"String",
+         "Type":"AWS::EC2::KeyPair::KeyName",
+         "MinLength":"1",
+         "MaxLength":"64",
+         "AllowedPattern":"[-_ a-zA-Z0-9]*",
+         "ConstraintDescription":"can contain only alphanumeric characters, spaces, dashes and underscores."
+      },
+      "KafkaDownloadURL": {
+         "Description": "URL to download kafka tarball",
+         "Type": "String",
+         "Default": "http://mirrors.advancedhosters.com/apache/kafka/0.8.2.1/kafka_2.9.2-0.8.2.1.tgz"
+      },
+      "RemoteAccessCIDR": {
+         "Description": "IP CIDR from which you are likely to SSH into. You can add rules later by modifying the created security groups e.g. 54.32.98.160/32.",
+         "Type": "String",
+         "MinLength": "9",
+         "MaxLength": "18",
+         "Default": "0.0.0.0/0",
+         "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+         "ConstraintDescription": "must be a valid CIDR range of the form x.x.x.x/x."
+      },
+      "ZkeeperServerInstanceType":{  
+         "Description":"Zookeeper EC2 instance type",
+         "Type":"String",
+         "Default":"r3.large",
+         "AllowedValues":[ 
+            "r3.large"
+         ],
+         "ConstraintDescription":"must be a valid EC2 instance type."
+      },
+      "KafkaServerInstanceType":{  
+         "Description":"Kafka Broker EC2 instance type",
+         "Type":"String",
+         "Default":"r3.xlarge",
+         "AllowedValues":[ 
+            "r3.xlarge"
+         ],
+         "ConstraintDescription":"must be a valid EC2 instance type."
+      }
+   },
+   "Mappings": {
+    "AmiId": {
+      "eu-central-1": {
+        "AMI": "ami-875042eb"
+      },
+      "sa-east-1": {
+        "AMI": "ami-27b3094b"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-0dd8f963"
+      },
+      "eu-west-1": {
+        "AMI": "ami-8b8c57f8"
+      },
+      "us-east-1": {
+        "AMI": "ami-2051294a"
+      },
+      "us-west-1": {
+        "AMI": "ami-d1315fb1"
+      },
+      "us-west-2": {
+        "AMI": "ami-775e4f16"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-e0c19f83"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-3f03c55c"
+      }
+    }
+   },
+   "Resources":{  
+      "RootRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "ec2.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/",
+            "Policies": [ {
+               "PolicyName": "root",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": "*",
+                     "Resource": "*"
+                  } ]
+               }
+               } ]
+            }
+      },
+      "IAMProfile" : {
+         "Type" : "AWS::IAM::InstanceProfile",
+         "Properties" : {
+           "Path" : "/",
+            "Roles" : [ {
+               "Ref":"RootRole"
+            } ]
+         }
+      },  
+      "KafkaServerSecurityGroup":{  
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{  
+            "GroupDescription":"KafkaServer SG to allow access to/from Kafka Brokers and Zookeepers.",
+            "VpcId":{  
+               "Ref":"VPCId"
+            },
+            "SecurityGroupIngress":[  
+               {  
+                  "IpProtocol":"tcp",
+                  "FromPort":"0",
+                  "ToPort":"65535",
+                  "CidrIp":{  
+                     "Ref":"SubnetCIDR"
+                  }
+               }     
+            ]
+         }
+      },
+     "SSHSecurityGroup": {
+         "Type": "AWS::EC2::SecurityGroup",
+         "Properties": {
+            "GroupDescription": "Enable SSH access",
+            "VpcId": {
+               "Ref": "VPCId"
+            },
+            "SecurityGroupIngress": [{
+               "IpProtocol": "tcp",
+               "FromPort": "22",
+               "ToPort": "22",
+               "CidrIp": {
+                  "Ref": "RemoteAccessCIDR"
+               }
+            }]
+         }
+      },
+      "KafkaBrokerInstance":{  
+         "Type":"AWS::EC2::Instance",
+         "Metadata":{  
+            "region":{  
+               "Ref":"AWS::Region"
+            },
+            "stack_name":{  
+               "Ref":"AWS::StackName"
+            },
+            "AWS::CloudFormation::Init":{
+               "config":{
+               }
+            }
+         },
+         "DependsOn":"KafkaZookeeperInstance",
+         "Properties":{  
+            "ImageId": {
+              "Fn::FindInMap": [
+                "AmiId", {
+                  "Ref": "AWS::Region"
+                },
+                "AMI"
+              ]
+            },
+            "InstanceType":{  
+               "Ref":"KafkaServerInstanceType"
+            },
+             "IamInstanceProfile" : {
+               "Ref" : "IAMProfile"
+            }, 
+            "KeyName":{  
+               "Ref":"KeyName"
+            },
+           "BlockDeviceMappings" : [
+            {
+                "DeviceName" : "/dev/sda1",
+                "Ebs" : { "VolumeSize" : "100", "VolumeType": "gp2" } 
+            }
+         ],             
+            
+            "NetworkInterfaces":[  
+               {  
+                  "GroupSet":[  
+                    {  
+                      "Ref":"KafkaServerSecurityGroup"
+                    },
+                    {  
+                      "Ref":"SSHSecurityGroup"
+                    }
+                  ],
+                  "AssociatePublicIpAddress": "true",
+                  "DeleteOnTermination": "true",
+                  "DeviceIndex":"0",
+                  "SubnetId": { "Ref" : "SubnetID" }
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":"KafkaBrokerInPublicSubnets",
+               }
+            ],
+            "UserData":{  
+               "Fn::Base64":{  
+                  "Fn::Join":[  
+                     "",
+                     [  
+                      "#!/bin/bash -v\n",
+                      "\nyum -y install unzip java wget\n",
+                      "\ncurl \"https://s3.amazonaws.com/aws-cli/awscli-bundle.zip\" -o \"awscli-bundle.zip\"\n",
+                      "unzip awscli-bundle.zip\n",
+                      "./awscli-bundle/install -b ~/bin/aws\n",
+                      "export PATH=~/bin:$PATH\n",
+                      "export ZOOKEEPER_ID=1\n",
+                      "su - root -c 'mkdir -p /app/kafka'\n",
+                      "wget ",
+                      {
+                        "Ref":"KafkaDownloadURL"
+                      },
+                      " -P /app\n",
+                      "export file=`echo ",
+                      {
+                        "Ref":"KafkaDownloadURL"
+                      },
+                      " | cut -f7 -d '/'`\n",
+                      "tar -zxvf /app/$file -C /app/kafka\n",
+                      "su - root -c 'mkdir -p /tmp/kafka-logs'\n",
+                      "sed -i.bak \"s/zookeeper.connect=.*/zookeeper.connect=",
+                      { "Fn::GetAtt" : [ "KafkaZookeeperInstance", "PrivateIp"]}
+                      ,
+                      ":2181/g\" /app/kafka/kafka_2.9.2-0.8.2.1/config/server.properties\n",
+                      "sed -i 's/Defaults    requiretty/Defaults    !requiretty/g' /etc/sudoers\n",
+                      "sed -i 's/KAFKA_JMX_OPTS=\"-D/KAFKA_JMX_OPTS=\"-Djava.net.preferIPv4Stack=true -D/g' /app/kafka/kafka_2.9.2-0.8.2.1/bin/kafka-run-class.sh\n",
+                      "su - root -c 'nohup /app/kafka/kafka_2.9.2-0.8.2.1/bin/kafka-server-start.sh /app/kafka/kafka_2.9.2-0.8.2.1/config/server.properties > /dev/null 2>&1 &'\n"
+                     ]
+                  ]
+               }
+            }
+         }
+      },
+      "KafkaZookeeperInstance":{  
+         "Type":"AWS::EC2::Instance",
+         "Metadata":{  
+            "region":{  
+               "Ref":"AWS::Region"
+            },
+            "stack_name":{  
+               "Ref":"AWS::StackName"
+            },
+            "AWS::CloudFormation::Init":{
+               "config":{
+               }
+            }
+         },
+         "Properties":{  
+             "ImageId": {
+                "Fn::FindInMap": [
+                  "AmiId", {
+                    "Ref": "AWS::Region"
+                  },
+                  "AMI"
+                ]
+                },
+            "InstanceType":{  
+               "Ref":"ZkeeperServerInstanceType"
+            },
+             "IamInstanceProfile" : {
+               "Ref" : "IAMProfile"
+            }, 
+            "KeyName":{  
+               "Ref":"KeyName"
+            },
+           "BlockDeviceMappings" : [
+               {
+                  "DeviceName" : "/dev/sda1",
+                  "Ebs" : { "VolumeSize" : "30", "VolumeType": "gp2" } 
+               }
+            ],             
+            "NetworkInterfaces":[  
+               {  
+                  "GroupSet":[  
+                    {  
+                      "Ref":"KafkaServerSecurityGroup"
+                    },
+                    {  
+                      "Ref":"SSHSecurityGroup"
+                    }
+                  ],
+                  "AssociatePublicIpAddress": "true",
+                  "DeleteOnTermination": "true",
+                  "DeviceIndex":"0",
+                  "SubnetId": { "Ref" : "SubnetID" }
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":"ZooKeeperInPublicSubnets"
+               }
+            ],
+            "UserData":{  
+               "Fn::Base64":{  
+                  "Fn::Join":[  
+                     "",
+                     [  
+                      "#!/bin/bash -v\n",
+                      "\nyum -y install unzip java wget\n",
+                      "\ncurl \"https://s3.amazonaws.com/aws-cli/awscli-bundle.zip\" -o \"awscli-bundle.zip\"\n",
+                      "unzip awscli-bundle.zip\n",
+                      "./awscli-bundle/install -b ~/bin/aws\n",
+                      "export PATH=~/bin:$PATH\n",
+                      "export ZOOKEEPER_ID=1\n",
+                      "su - root -c 'mkdir -p /app/kafka'\n",
+                       "wget ",
+                      {
+                        "Ref":"KafkaDownloadURL"
+                      },
+                      " -P /app\n",
+                      "export file=`echo ",
+                      {
+                        "Ref":"KafkaDownloadURL"
+                      },
+                      " | cut -f7 -d '/'`\n",
+                      "tar -zxvf /app/$file -C /app/kafka\n",
+                      "su - root -c 'mkdir -p /tmp/zookeeper'\n",
+                      "echo $ZOOKEEPER_ID > /tmp/zookeeper/myid\n",
+                      "echo \"initLimit=5\nsyncLimit=2\" >> /app/kafka/kafka_2.9.2-0.8.2.1/config/zookeeper.properties\n",
+                      "sed -i 's/Defaults    requiretty/Defaults    !requiretty/g' /etc/sudoers\n",
+                      "sed -i 's/KAFKA_JMX_OPTS=\"-D/KAFKA_JMX_OPTS=\"-Djava.net.preferIPv4Stack=true -D/g' /app/kafka/kafka_2.9.2-0.8.2.1/bin/kafka-run-class.sh\n",
+                      "su - root -c 'nohup /app/kafka/kafka_2.9.2-0.8.2.1/bin/zookeeper-server-start.sh /app/kafka/kafka_2.9.2-0.8.2.1/config/zookeeper.properties > /dev/null 2>&1 &'\n"
+                  ]
+               ]
+            }
+         }
+      }
+   }
+  },
+  "Outputs":{  
+      "KafkaBrokerInfo":{  
+         "Value" : { 
+         "Fn::Join" : [ ":", [ { "Fn::GetAtt" : [ "KafkaBrokerInstance", "PublicDnsName"]}, "9092" ] ]
+
+         },
+         "Description":"PublicDnsName of KafkaBroker.\n"
+      },
+      "ZookeeperInfo":{  
+         "Value" : {
+         "Fn::Join" : [ ":", [ { "Fn::GetAtt" : [ "KafkaZookeeperInstance", "PublicDnsName"]}, "2181" ] ]
+          },
+         "Description":"PublicDnsName of Zookeeper.\n"
+      }
+   }
+}
+
+
