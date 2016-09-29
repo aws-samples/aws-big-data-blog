@@ -14,7 +14,7 @@ Sample records for the AGGRJOBCONFIGURATION are also provided here as a referenc
 
 ### AGGRJOBCONFIGURATION
 | Column | Type | Description |
-| ------ | -------------- |
+| ------ |----- | -------------- |
 | job_config_id | varchar | Job Configuration Identifier |
 | job_input_pattern | varchar | The file pattern that this job cares about. The EMR Job Submission Layer lambda function checks whether the timestmap for these files is later than the timestamp when the job ran last time |
 | job_min_file_count | int | The minimum number of files that should be collected before submitting this job |
@@ -28,7 +28,7 @@ Sample records for the AGGRJOBCONFIGURATION are also provided here as a referenc
 
 ### INGESTEDFILESTATUS
 | Column | Type | Description |
-| ------ | ------------ |
+| ------ | ---- | ------------ |
 | file_url | varchar | The complete key  of the input file including the bucket name |
 | submitted_jobs | json | A JSON list  the jobs that were submitted  with this file.  When a new update of this file is received , this array will be reset to null. By a  join on this column and job_config_id  column AGGRJOBCONFIGURATION table ,  the files related to a FAILED job or RUNNING job or COMPLETED job can be obtained |
 | last_update_status | varchar | Indicates whether the latest update on this file has been validated or not |
