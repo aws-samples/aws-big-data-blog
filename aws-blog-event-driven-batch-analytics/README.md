@@ -5,22 +5,39 @@
 This repository contains the code that supports the [AWS Big Data Blog Post](https://blogs.aws.amazon.com/bigdata/)
 
 ### Usecase Description
-Yummy Foods has franchise stores all over the country. These franchise stores run on hetrogenous platforms and they submit cumulative transaction files to Yummy Foods at varuious cadence levels through out the day in tab delimited .tdf format. Some of these franchise stores due to their system limitations ocassionally send additional data starting with characters such as “----“.
+Yummy Foods, a hypothetical entity, has franchise stores all over the country. These franchise stores run on heterogeneous platforms and they submit cumulative transaction files to Yummy Foods corporate at various cadence levels through out the day in tab delimited .tdf format. Due to a limitation in some of their systems, some franchise stores occasionally  send additional data starting with characters such as “----“.
 
-The requirement is to be able to update insights on the sales made by each franchise for a given item through out the day as soon as the complete list of franchise files from a given province are available. The number of franchises per province is fixed and seldom changes.
+Yummy Foods needs to be able to update internal users on sales made by each franchise for a given item throughout the day, and as soon as the complete list of franchise files from a given province are available. The number of franchises per province is fixed and seldom changes.
 
-The aggregation job for given province should not be submitted until the configured number of franchise store files from that province are available and also until the product master data update is posted at the beginning of the day. A master data update is identified by the presence of atleast one “Item.csv” file for that day
+The aggregation job for given province should not be submitted until the configured number of franchise store files from that province are available and also until the product master data update is posted at the beginning of the day. A master data update is identified by the presence of at least one “Item.csv” file for that day
 
-The aggregation job should consider only transaction codes 4 (sale amount) , 5 (tax amount) and 6 (discount amount). Rest of the codes can be ignored. Once the aggregation job is completed only one record should exist for a combination of franchise store,item and transaction date
+Multiple record categories indicating whether credit card or cash has been used, whether its a drive through or in-store purchase, the actual sale amount, the tax amount etc. exists in each transaction file franchise store sends. The  aggregation job in our hypothetical should consider only records category: 4 (sale amount) , 5 (tax amount) and 6 (discount amount). Once the aggregation job is completed only one record should exist for a combination of franchise store,item and transaction date
+
+### Architecture
+
+![](img/architecture.png)
+
+* The “Input Validation/ Conversion “ layer eliminates any bad data in the input files and converts  the tab delimited .tdf files to .csv files.
+
+* The “State Management Store” is modelled to be able to store ingested file status (INGESTEDFILESTATUS) and also the job configurations (AGGRJOBCONFIGURATION) with preconditions  such as waiting until all the fixed number of vendor files are received for a province and verifying that the item master data is posted.  
+
+* The “Input Tracking” layer records the last validated timestamp of the input file in the file status table (INGESTEDFILESTATUS) within the “State Management Store”.
+
+* The “Aggregation Job Submisssion” layer submits a job when the preconditions configured for a job in the “State Management Store” are satisfied.
+
+* The “Aggregation and Load layer” EMR Spark job, based on the input parameter, processes and aggregates the vendor transaction data and updates the Amazon Redshift data warehouse.
+
+* The “Aggregation Job Monitoring” layer at a scheduled interval updates the active “Running” job status to either “Completed” or “Failed” for tracking purposes.
+
 
 
 ### Pre-Requisites
-1. Create VPC with at least one private "MyPrivateSubnet" and one public subnet "MyPublicSubnet"
-2. Create a NAT Gateway or NAT Instance for [lambda functions in private subnet](https://aws.amazon.com/blogs/aws/new-access-resources-in-a-vpc-from-your-lambda-functions/) to be able to access internet
-3. Create a role "myLambdaRole" with AWSLambdaVPCAccessExecution, AWSLambdaRole, ElasticMapReduceForEC2Role,S3 and Cloudwatch access policies
-4. Create security group "MySecurityGroup" with inbound MySQL (3306) and Redshift (5439) ports open.
-5. Jar file with all dependencies is already available in S3 at this location. Download it your local environment [location](s3://event-driven-batch-analytics/code/eventdrivenbatchanalytics.jar).
-6. If you wish to build your own jar,download mySQL JDBC driver and Redshift JDBC Driver and add it to your maven repository
+1. To organize your Lambda functions in your own VPC, the following pre-requisites need to be met:
+  1. Create VPC with at least one private "MyPrivateSubnet" and one public subnet "MyPublicSubnet"
+  2. Create a NAT Gateway or NAT Instance for [lambda functions in private subnet](https://aws.amazon.com/blogs/aws/new-access-resources-in-a-vpc-from-your-lambda-functions/) to be able to access internet
+  3. Create a role "myLambdaRole" with AWSLambdaVPCAccessExecution, AWSLambdaRole, ElasticMapReduceForEC2Role,S3 and Cloudwatch access policies
+  4. Create security group "MySecurityGroup" with inbound MySQL (3306) and Redshift (5439) ports open.
+2. Download mySQL JDBC driver and Redshift JDBC Driver and add it to your maven repository
 
 ### Getting Started
 
