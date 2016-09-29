@@ -30,7 +30,6 @@ object ClickstreamSparkstreaming {
     }
 
     val Array(brokers, topics) = args
-
     
     val sparkConf = new SparkConf().setAppName("DirectKafkaClickstreams")
     // Create context with 10 second batch interval
@@ -47,6 +46,7 @@ object ClickstreamSparkstreaming {
     val lines = messages.map(_._2)
     
     val warehouseLocation = "file:${system:user.dir}/spark-warehouse"
+
     val spark = SparkSession
       .builder
       .config(sparkConf)
@@ -60,11 +60,8 @@ object ClickstreamSparkstreaming {
     // Create the tables to store your streams 
     spark.sql("CREATE TABLE csmessages_hive_table ( recordtime string, eventid string, url string, ip string ) STORED AS TEXTFILE")
 
-   
     // Convert RDDs of the lines DStream to DataFrame and run SQL query
     lines.foreachRDD { (rdd: RDD[String], time: Time) =>
-      
-   
       
       import spark.implicits._
       // Convert RDD[String] to RDD[case class] to DataFrame
@@ -90,7 +87,5 @@ object ClickstreamSparkstreaming {
 
   }
 }
-
 /** Case class for converting RDD to DataFrame */
 case class Record(recordtime: String,eventid: String,url: String,ip: String)
-

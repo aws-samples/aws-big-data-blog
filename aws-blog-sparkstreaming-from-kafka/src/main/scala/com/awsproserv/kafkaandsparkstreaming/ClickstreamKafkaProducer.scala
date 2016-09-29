@@ -10,7 +10,7 @@ import kafka.producer.Producer
 import kafka.producer.KeyedMessage
 import java.util.Date
 
-object ClickstreamKafkaProducer extends App{
+object ClickstreamKafkaProducer extends App {
   
   val events = args(0).toInt
   val topic = args(1)
