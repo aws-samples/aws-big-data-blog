@@ -2,9 +2,7 @@
 
 ## State Management Store
 
-As the name indicates, the persistent storage in this layer stores the state information of files received from data sources and the aggregation jobs configured to run on those files. The state management store is central to this architecture approach, as it helps control the criteria for submitting an EMR aggregation job, its input size and input type, along with other parameters.
-
-The state management store provides a single view of input files that have been received, the list of jobs currently running on those files, and the information on the states (Running/ Completed/ Failed) of those jobs.
+The state management store is central to this architecture approach, as it helps control the criteria for submitting an EMR aggregation job, its input size and input type, along with other parameters.The state management store provides a single view of input files that have been received, the list of jobs currently running on those files, and the information on the states (Running/ Completed/ Failed) of those jobs.
 
 A simple statement management store can be accomplished with two tables: one for storing aggregation job configurations (AGGRJOBCONFIGURATION) and another for storing the ingested file status (INGESTEDFILESTATUS). Here are the columns in each table and their descriptions. The DDL and the EMR job configurations for the tracking store can be found here
 
