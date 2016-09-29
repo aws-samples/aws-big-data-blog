@@ -11,7 +11,7 @@ Yummy Foods needs to be able to update internal users on sales made by each fran
 
 The aggregation job for given province should not be submitted until the configured number of franchise store files from that province are available and also until the product master data update is posted at the beginning of the day. A master data update is identified by the presence of at least one “Item.csv” file for that day
 
-Multiple record categories indicating whether credit card or cash has been used, whether its a drive through or in-store purchase, the actual sale amount, the tax amount etc. exists in each transaction file franchise store sends. The  aggregation job in our hypothetical should consider only records category: 4 (sale amount) , 5 (tax amount) and 6 (discount amount). Once the aggregation job is completed only one record should exist for a combination of franchise store,item and transaction date
+Multiple transaction categories indicating whether credit card or cash has been used, whether its a drive through or in-store purchase, the actual sale amount, the actual tax amount etc. exists in each transaction file franchise store sends. The  aggregation job in our hypothetical should consider only records category: 4 (sale amount) , 5 (tax amount) and 6 (discount amount). Once the aggregation job is completed only one record should exist for a combination of franchise store,item and transaction date
 
 ### Architecture
 
