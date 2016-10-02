@@ -35,7 +35,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
 1. To organize your Lambda functions in your own VPC, the following pre-requisites need to be met:
   1. Create VPC with at least one private "MyPrivateSubnet" and one public subnet "MyPublicSubnet"
   2. Create a NAT Gateway or NAT Instance for [lambda functions in private subnet](https://aws.amazon.com/blogs/aws/new-access-resources-in-a-vpc-from-your-lambda-functions/) to be able to access internet
-  3. Create a role "myLambdaRole" with AWSLambdaVPCAccessExecution, AWSLambdaRole, ElasticMapReduceForEC2Role,S3 and Cloudwatch access policies
+  3. Create a role "myLambdaRole" with AWSLambdaVPCAccessExecution, AWSLambdaRole, ElasticMapReduceForEC2Role,S3 and CloudWatch access policies
   4. Create security group "MySecurityGroup" with inbound MySQL (3306) and Redshift (5439) ports open.
 2. Download MySQL JDBC driver (5.1.38 or later) and Redshift JDBC Driver (1.1.13 or later) and [add](https://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html) those to your maven repository
 
@@ -46,7 +46,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
   aws s3 mb <<S3_EDBA_BUCKET>>
   ```
 1. Create  [Amazon RDS Mysql 5.7.x instance](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.MySQL.html)
-2. Update [lambda function properties](src/main/resources/edba_labmbda_config.properties) with your MySQL endpoint, username and password
+2. Update [lambda function properties](src/main/resources/edba_lambda_config.properties) with your MySQL endpoint, username and password
 3. Update [job configurations](resources/edba_config_mysql.sql) maintained in statement management store with the S3 bucket name you created in step#1 and connect to the mysql database instance through your preferred SQL client to execute sql statements inside resources/edba_config_mysql.sql
 3. Create a two node dc1.large [Redshift cluster](http://docs.aws.amazon.com/redshift/latest/mgmt/managing-clusters-console.html#create-cluster)
 4. Connect to the cluster through your preferred SQL client and execute statements inside resources/edba_redshift.sql file
@@ -56,7 +56,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
   ```
   mvn package
   ```
-7. copy the final jar at a locaiton you configured in step#3
+7. copy the final jar to s3 location you configured in step#3
   ```
   aws s3 cp ./eventdrivenbatchanalytics.jar s3://<<S3_EDBA_BUCKET>>/code/
   ```
@@ -121,7 +121,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
   ```
   aws events put-rule --name monitorEMRJobRule --schedule-expression 'rate(15 minutes)'
   ```
-19. Give Cloudwatch event rule permission to invoke "monitorEMRAggregationJob" lambda function
+19. Give CloudWatch event rule permission to invoke "monitorEMRAggregationJob" lambda function
 
   ```
   aws lambda add-permission \
