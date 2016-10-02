@@ -19,11 +19,11 @@ Multiple transaction categories indicating whether credit card or cash has been 
 
 * The “Input Validation/ Conversion “ layer eliminates any bad data in the input files and converts  the tab delimited .tdf files to .csv files.
 
-* The “State Management Store” is modelled to be able to store ingested file status (INGESTEDFILESTATUS) and also the job configurations (AGGRJOBCONFIGURATION) with preconditions  such as waiting until all the fixed number of vendor files are received for a province and verifying that the item master data is posted.  
+* The “State Management Store” is modeled to be able to store ingested file status (INGESTEDFILESTATUS) and also the job configurations (AGGRJOBCONFIGURATION) with preconditions  such as waiting until all the fixed number of vendor files are received for a province and verifying that the item master data is posted.  
 
 * The “Input Tracking” layer records the last validated timestamp of the input file in the file status table (INGESTEDFILESTATUS) within the “State Management Store”.
 
-* The “Aggregation Job Submisssion” layer submits a job when the preconditions configured for a job in the “State Management Store” are satisfied.
+* The “Aggregation Job Submission” layer submits a job when the preconditions configured for a job in the “State Management Store” are satisfied.
 
 * The “Aggregation and Load layer” EMR Spark job, based on the input parameter, processes and aggregates the vendor transaction data and updates the Amazon Redshift data warehouse.
 
@@ -45,58 +45,62 @@ Multiple transaction categories indicating whether credit card or cash has been 
  ```
   aws s3 mb <<S3_EDBA_BUCKET>>
   ```
-1. Create  [Amazon RDS Mysql 5.7.x instance](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.MySQL.html)
-2. Update [lambda function properties](src/main/resources/edba_lambda_config.properties) with your MySQL endpoint, username and password
-3. Update [job configurations](resources/edba_config_mysql.sql) maintained in statement management store with the S3 bucket name you created in step#1 and connect to the mysql database instance through your preferred SQL client to execute sql statements inside resources/edba_config_mysql.sql
-3. Create a two node dc1.large [Redshift cluster](http://docs.aws.amazon.com/redshift/latest/mgmt/managing-clusters-console.html#create-cluster)
-4. Connect to the cluster through your preferred SQL client and execute statements inside resources/edba_redshift.sql file
-5. Update Update [spark job properties](src/main/resources/spark-job.conf) with Redshift cluster endpoint and S3 temporary path
-6. Build the jar by executing maven shade package. You need to execute this command from the directory where the pom.xml is located
+2. Create  [Amazon RDS Mysql 5.7.x instance](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.MySQL.html)
+3. Update [lambda function properties](src/main/resources/edba_lambda_config.properties) with your MySQL endpoint, username and password
+4. Create EMR cluster with tag "edba=true". When submitting aggregation jobs to the cluster the "Aggregation Job Submission” layer lambda function will look for the active clusters that have this tag. If you wish to use to a different tag, update [lambda function properties](src/main/resources/edba_lambda_config.properties) to reflect the same
+  ```
+  aws emr create-cluster --name “MY_EDBA_CLUSTER" --release-label emr-5.0.0 --use-default-roles --ec2-attributes KeyName=my-key --applications Name=Hadoop Name=Spark --region my-region --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge  --tags edba=true
+  ```
+5. Update [job configurations](resources/edba_config_mysql.sql) maintained in statement management store with the S3 bucket name you created in step#1 and connect to the mysql database instance through your preferred SQL client to execute sql statements inside resources/edba_config_mysql.sql
+6. Create a two node dc1.large [Redshift cluster](http://docs.aws.amazon.com/redshift/latest/mgmt/managing-clusters-console.html#create-cluster)
+7. Connect to the cluster through your preferred SQL client and execute statements inside resources/edba_redshift.sql file
+8. Update Update [spark job properties](src/main/resources/spark-job.conf) with Redshift cluster endpoint and S3 temporary path
+9. Build the jar by executing maven shade package. You need to execute this command from the directory where the pom.xml is located
 
   ```
   mvn package
   ```
-7. copy the final jar to s3 location you configured in step#3
+10. copy the final jar to s3 location you configured in step#3
   ```
   aws s3 cp ./eventdrivenbatchanalytics.jar s3://<<S3_EDBA_BUCKET>>/code/
   ```
-8. Create Validation/Conversion Layer Lambda function
+11. Create Validation/Conversion Layer Lambda function
 
   ```
   aws lambda create-function --function-name validateAndNormalizeInputData --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::validateAndNormalizeInputData --role arn:aws:iam::<<myAccountNumber>>:role/<<myLambdaRole>> --runtime java8 --timeout 120
   ```
-9. Provide S3 permissions to invoke the Validation Layer lambda function
+12. Provide S3 permissions to invoke the Validation Layer lambda function
 
   ```
   aws lambda add-permission --function-name auditValidatedFile --statement-id 2222 --action "lambda:InvokeFunction" --principal s3.amazonaws.com --source-arn arn:aws:s3:::event-driven-batch-analytics --source-account <<MyAccount>>
   ```
-10. Create "Input Tracking Layer" lambda function
+13. Create "Input Tracking Layer" lambda function
 
   ```
   aws lambda create-function --function-name  auditValidatedFile --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::auditValidatedFile --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 --vpc-config '{"SubnetIds":["MyPrivateSubnet"],"SecurityGroupIds":["MySecurityGroup"]}' --memory-size 1024 --timeout 120
   ```
-11. Provide S3 permissions to invoke "Input Tracking Layer" lambda function
+14. Provide S3 permissions to invoke "Input Tracking Layer" lambda function
 
   ```
   aws lambda add-permission --function-name auditValidatedFile --statement-id 2222 --action "lambda:InvokeFunction" --principal s3.amazonaws.com --source-arn arn:aws:s3:::event-driven-batch-analytics --source-account 203726645967
   ```
-12. Configure events in S3 to trigger "Validation/Conversion Layer" and "Input Tracking Layer" lambda functions
+15. Configure events in S3 to trigger "Validation/Conversion Layer" and "Input Tracking Layer" lambda functions
 
   ```
   aws s3api put-bucket-notification-configuration --notification-configuration file:///<<MyPath>>/put-bucket-notification.json --bucket event-driven-batch-analytics
   ```
-13. Create EMR Job Submission Layer lambda function. This function will submit a EMR job if the respective configured  criteria has been passed  
+16. Create EMR Job Submission Layer lambda function. This function will submit a EMR job if the respective configured  criteria has been passed  
 
   ```
   aws lambda create-function --function-name  checkCriteriaFireEMR --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics-0.0.1-SNAPSHOT.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::checkConditionStatusAndFireEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
   --vpc-config '{"SubnetIds":["MyPrivateSubnet"],"SecurityGroupIds":["MySecurityGroup"]}' --memory-size 1024 --timeout 300
   ```
-14. Schedule CloudWatch Event to fire every 10 minutes to verify whether any Aggregation Job submission criteria is passed
+17. Schedule CloudWatch Event to fire every 10 minutes to verify whether any Aggregation Job submission criteria is passed
 
   ```
   aws events put-rule --name scheduledEMRJobRule --schedule-expression 'rate(10 minutes)'
   ```
-15. Give CloudWatch events rule permission to invoke "scheduledEMRJobRule" lambda function
+18. Give CloudWatch events rule permission to invoke "scheduledEMRJobRule" lambda function
 
   ```
   aws lambda add-permission \
@@ -105,23 +109,23 @@ Multiple transaction categories indicating whether credit card or cash has been 
   --action 'lambda:InvokeFunction' \
   --principal events.amazonaws.com --source-arn  arn:aws:events:us-east-1:<<myAccountNumber>>:rule/scheduledEMRRule
   ```
-16. Configure "checkCriteriaFireEMR" Lambda function as target for the "scheduledEMRJobRule" CloudWatch event rule
+19. Configure "checkCriteriaFireEMR" Lambda function as target for the "scheduledEMRJobRule" CloudWatch event rule
 
   ```
   aws events put-targets --rule scheduledEMRJobRule  --targets '{"Id" : "1", "Arn": "arn:aws:lambda:us-east-1:<<myAccountNumber>>:function:checkCriteriaFireEMR"}'
   ```
-17. Create EMR Job Monitoring Layer lambda function. This function will update AGGRJOBCONFIGURATION table with status of a RUNNING EMR step
+20. Create EMR Job Monitoring Layer lambda function. This function will update AGGRJOBCONFIGURATION table with status of a RUNNING EMR step
 
   ```
   aws lambda create-function --function-name  monitorEMRAggregationJob --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics-0.0.1-SNAPSHOT.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::monitorEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
   --vpc-config '{"SubnetIds":["MyPrivateSubnet"],"SecurityGroupIds":["MySecurityGroup"]}' --memory-size 500 --timeout 300
   ```
-18. Schedule CloudWatch Event to monitor submitted EMR jobs  every 15 minutes
+21. Schedule CloudWatch Event to monitor submitted EMR jobs  every 15 minutes
 
   ```
   aws events put-rule --name monitorEMRJobRule --schedule-expression 'rate(15 minutes)'
   ```
-19. Give CloudWatch event rule permission to invoke "monitorEMRAggregationJob" lambda function
+22. Give CloudWatch event rule permission to invoke "monitorEMRAggregationJob" lambda function
 
   ```
   aws lambda add-permission \
@@ -130,27 +134,27 @@ Multiple transaction categories indicating whether credit card or cash has been 
   --action 'lambda:InvokeFunction' \
   --principal events.amazonaws.com --source-arn  arn:aws:events:us-east-1:<<myAccountNumber>>:rule/monitorEMRJobRule
   ```
-20. Configure "monitorEMRAggregationJob" lambda function as target for "monitorEMRJobRule"
+23. Configure "monitorEMRAggregationJob" lambda function as target for "monitorEMRJobRule"
 
   ```
   aws events put-targets --rule monitorEMRJobRule  --targets '{"Id" : "1", "Arn": "arn:aws:lambda:us-east-1:<<myAccountNumber>>:function:monitorEMRAggregationJob"}'
   ```
-21. Download the files from resources/sampledata/ to your local directory and from the directory where you downloaded the files to, upload them to S3://event-driven-batch-analytics/ with prefix data/source-identical.
+24. Download the files from resources/sampledata/ to your local directory and from the directory where you downloaded the files to, upload them to S3://event-driven-batch-analytics/ with prefix data/source-identical.
 
   ```
   aws s3 sync . s3://event-driven-batch-analytics/data/source-identical/
   ```
-22. Observe the timestamps of CloudWatch logs for each of the lambda functions being created and updated. Notice that there are no errors recorded
+25. Observe the timestamps of CloudWatch logs for each of the lambda functions being created and updated. Notice that there are no errors recorded
 21) After around 10 minutes, connect to the MySQL client and verify whether any jobs have been submitted. The schedule interval will determine the delay
 
   ```
   select job_config_id from aggrjobconfiguration where last_exec_status = 'RUNNING';
   ```
-23. Verify that the job configuration "J101" (Vendor transactions posted from the state of "Illinois") is in "RUNNING" state
+26. Verify that the job configuration "J101" (Vendor transactions posted from the state of "Illinois") is in "RUNNING" state
 
-24. Connect to the redshift cluster and verify that the data in the tables "vendortranssummary" is populated for the vendor transactions.
+27. Connect to the redshift cluster and verify that the data in the tables "vendortranssummary" is populated for the vendor transactions.
 
-25. If for any reason a job is failed, execute the below query to find out the impacted files
+28. If for any reason a job is failed, execute the below query to find out the impacted files
 
   ```
   select t1.job_config_id,t2.file_url,t2.last_validated_timestamp from aggrjobconfiguration t1 join ingestedfilestatus t2 on json_contains(t2.submitted_jobs,json_array(t1.job_config_id))=1 where t1.last_exec_status='FAILED';
