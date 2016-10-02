@@ -42,12 +42,14 @@ Multiple transaction categories indicating whether credit card or cash has been 
 ### Getting Started
 
 1. Create S3 bucket. This is the bucket where you would store Spark aggregation job configurations and also the the final packaged jar
+
  ```
   aws s3 mb <<S3_EDBA_BUCKET>>
   ```
 2. Create  [Amazon RDS Mysql 5.7.x instance](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_GettingStarted.CreatingConnecting.MySQL.html)
 3. Update [lambda function properties](src/main/resources/edba_lambda_config.properties) with your MySQL endpoint, username and password
 4. Create EMR cluster with tag "edba=true". When submitting aggregation jobs to the cluster the "Aggregation Job Submission” layer lambda function will look for the active clusters that have this tag. If you wish to use to a different tag, update [lambda function properties](src/main/resources/edba_lambda_config.properties) to reflect the same
+
   ```
     aws emr create-cluster --name “MY_EDBA_CLUSTER" --release-label emr-5.0.0 --use-default-roles --ec2-attributes KeyName=my-key --applications Name=Hadoop Name=Spark --region my-region --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge  --tags edba=true
   ```
@@ -61,6 +63,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
   mvn package
   ```
 10. copy the final jar to s3 location you configured in step#3
+
   ```
   aws s3 cp ./eventdrivenbatchanalytics.jar s3://<<S3_EDBA_BUCKET>>/code/
   ```
