@@ -53,7 +53,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
   ```
     aws emr create-cluster --name “MY_EDBA_CLUSTER" --release-label emr-5.0.0 --use-default-roles --ec2-attributes KeyName=my-key --applications Name=Hadoop Name=Spark --region my-region --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m3.xlarge InstanceGroupType=CORE,InstanceCount=3,InstanceType=m3.xlarge  --tags edba=true
   ```
-5. Update [job configurations](resources/edba_config_mysql.sql) maintained in statement management store with the S3 bucket name you created in step#1 and connect to the mysql database instance through your preferred SQL client to execute sql statements inside resources/edba_config_mysql.sql
+5. Update [job configurations](resources/edba_config_mysql.sql) maintained in state management store with the S3 bucket name you created in step#1 and connect to the mysql database instance through your preferred SQL client to execute sql statements inside resources/edba_config_mysql.sql
 6. Create a two node dc1.large [Redshift cluster](http://docs.aws.amazon.com/redshift/latest/mgmt/managing-clusters-console.html#create-cluster)
 7. Connect to the cluster through your preferred SQL client and execute statements inside resources/edba_redshift.sql file
 8. Update Update [spark job properties](src/main/resources/spark-job.conf) with Redshift cluster endpoint and S3 temporary path
