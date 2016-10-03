@@ -1,0 +1,121 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.amazonaws.bigdatablog</groupId>
+  <artifactId>eventdrivenbatchanalytics</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>eventdrivenbatchanalytics</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.7</java.version>
+    <spark.version>1.6.0</spark.version>
+    <lambda.version>1.1.0</lambda.version>
+    <aws.sdk.version>1.10.58</aws.sdk.version>
+    <aws.sdk.sts.version>1.9.6</aws.sdk.sts.version>
+    <spark.redshift.connector.version>2.0.1</spark.redshift.connector.version>
+    <amazon.redshift.driver.version>1.1.13</amazon.redshift.driver.version>
+    <commons.csv.version>1.0</commons.csv.version>
+    <mysql.connector.version>5.1.38</mysql.connector.version>
+    <spark.core.version>2.0.0</spark.core.version> 
+    <maven.shade.version>2.3</maven.shade.version>
+    <junit.version>3.8.1</junit.version>
+    <maven.compiler.version>2.3.2</maven.compiler.version>
+  </properties>
+
+<dependencies>
+
+ <dependency>
+    	<groupId>
+    		com.amazonaws
+    	</groupId>
+    	<artifactId>aws-lambda-java-core</artifactId>
+    	<version>${lambda.version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.amazonaws</groupId>
+    	<artifactId>aws-lambda-java-events</artifactId>
+    	<version>${lambda.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+        <version>${aws.sdk.version}</version>
+    </dependency>
+    <dependency>
+		<groupId>com.amazonaws</groupId>
+		<artifactId>aws-java-sdk-emr</artifactId>
+		<version>${aws.sdk.version}</version>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.commons</groupId>
+	  <artifactId>commons-csv</artifactId>
+	  <version>${commons.csv.version}</version>
+</dependency>	
+	<dependency>
+		<groupId>mysql</groupId>
+		<artifactId>mysql-connector-java</artifactId>
+		<version>${mysql.connector.version}</version>
+	</dependency>
+	<!-- http://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-sns -->
+	<dependency>
+		<groupId>org.apache.spark</groupId>
+		<artifactId>spark-core_2.10</artifactId>
+		<version>${spark.core.version}</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.spark</groupId>
+		<artifactId>spark-sql_2.10</artifactId>
+		<version>${spark.core.version}</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.databricks</groupId>
+		<artifactId>spark-redshift_2.10</artifactId>
+		<version>${spark.redshift.connector.version}</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.amazon</groupId>
+		<artifactId>redshift</artifactId>
+		<version>${amazon.redshift.driver.version}</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.amazonaws</groupId>
+		<artifactId>aws-java-sdk-sts</artifactId>
+		<version>${aws.sdk.sts.version}</version>
+		<scope>provided</scope>
+	</dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+  	<plugins>
+  			<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven.compiler.version}</version>
+					<configuration>
+						<source>${java.version}</source>
+						<target>${java.version}</target>
+					</configuration>
+		</plugin>
+  		<plugin>
+  			<groupId>org.apache.maven.plugins</groupId>
+  			<artifactId>maven-shade-plugin</artifactId>
+  			<version>${maven.shade.version}</version>
+  		</plugin>
+  	</plugins>
+  </build>
+
+</project>
