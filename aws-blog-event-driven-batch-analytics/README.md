@@ -5,7 +5,7 @@
 This repository contains the code that supports the [AWS Big Data Blog Post](https://blogs.aws.amazon.com/bigdata/)
 
 ### Usecase Description
-Yummy Foods, a hypothetical entity, has franchise stores all over the country. These franchise stores run on heterogeneous platforms and they submit cumulative transaction files to Yummy Foods corporate at various cadence levels through out the day in tab delimited .tdf format. Due to a limitation in some of their systems, some franchise stores occasionally  send additional data starting with characters such as “----“.
+Yummy Foods, a hypothetical customer, has franchise stores all over the country. These franchise stores run on heterogeneous platforms and they submit cumulative transaction files to Yummy Foods corporate at various cadence levels throughout the day in tab delimited .tdf format. Due to a limitation in some of their systems, some franchise stores occasionally send additional data starting with characters such as “----“.
 
 Yummy Foods needs to be able to update internal users on sales made by each franchise for a given item throughout the day, and as soon as the complete list of franchise files from a given province are available. The number of franchises per province is fixed and seldom changes.
 
@@ -17,9 +17,9 @@ Multiple transaction categories indicating whether credit card or cash has been 
 
 ![](img/architecture.png)
 
-* The “Input Validation/ Conversion “ layer eliminates any bad data in the input files and converts  the tab delimited .tdf files to .csv files.
+* The “Input Validation/ Conversion “ layer eliminates any bad data in the input files and converts the tab delimited .tdf files to .csv files.
 
-* The “State Management Store” is modeled to be able to store ingested file status (INGESTEDFILESTATUS) and also the job configurations (AGGRJOBCONFIGURATION) with preconditions  such as waiting until all the fixed number of vendor files are received for a province and verifying that the item master data is posted.  
+* The “State Management Store” is modeled to be able to store ingested file status (INGESTEDFILESTATUS) and also the job configurations (AGGRJOBCONFIGURATION) with preconditions such as waiting until all the fixed number of vendor files are received for a province and verifying that the item master data is posted.  
 
 * The “Input Tracking” layer records the last validated timestamp of the input file in the file status table (INGESTEDFILESTATUS) within the “State Management Store”.
 
@@ -95,7 +95,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
 16. Create EMR Job Submission Layer lambda function. This function will submit a EMR job if the respective configured  criteria has been passed  
 
   ```
-  aws lambda create-function --function-name  checkCriteriaFireEMR --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics-0.0.1-SNAPSHOT.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::checkConditionStatusAndFireEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
+  aws lambda create-function --function-name  checkCriteriaFireEMR --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::checkConditionStatusAndFireEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
   --vpc-config '{"SubnetIds":["MyPrivateSubnet"],"SecurityGroupIds":["MySecurityGroup"]}' --memory-size 1024 --timeout 300
   ```
 17. Schedule CloudWatch Event to fire every 10 minutes to verify whether any Aggregation Job submission criteria is passed
@@ -120,7 +120,7 @@ Multiple transaction categories indicating whether credit card or cash has been 
 20. Create EMR Job Monitoring Layer lambda function. This function will update AGGRJOBCONFIGURATION table with status of a RUNNING EMR step
 
   ```
-  aws lambda create-function --function-name  monitorEMRAggregationJob --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics-0.0.1-SNAPSHOT.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::monitorEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
+  aws lambda create-function --function-name  monitorEMRAggregationJob --zip-file fileb:///<<MyPath>>/eventdrivenbatchanalytics.jar --handler com.amazonaws.bigdatablog.edba.LambdaContainer::monitorEMRStep --role arn:aws:iam::<<myAccountNumber>>:role/lambdas3eventprocessor --runtime java8 \
   --vpc-config '{"SubnetIds":["MyPrivateSubnet"],"SecurityGroupIds":["MySecurityGroup"]}' --memory-size 500 --timeout 300
   ```
 21. Schedule CloudWatch Event to monitor submitted EMR jobs  every 15 minutes
