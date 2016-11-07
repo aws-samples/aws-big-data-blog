@@ -22,7 +22,7 @@ export HADOOP_CONF_DIR=/home/ec2-user/hadoopconf
 export ZEPPELIN_NOTEBOOK_STORAGE=org.apache.zeppelin.notebook.repo.S3NotebookRepo
 export ZEPPELIN_NOTEBOOK_S3_BUCKET=
 export ZEPPELIN_NOTEBOOK_S3_USER=
-export SPARK_HOME=/home/ec2-user/prereqs/spark-2.0.0-bin-hadoop2.7
+export SPARK_HOME=/home/ec2-user/prereqs/spark
 
 
 # export ZEPPELIN_JAVA_OPTS      		# Additional jvm options. for example, export ZEPPELIN_JAVA_OPTS="-Dspark.executor.memory=8g -Dspark.cores.max=16"
