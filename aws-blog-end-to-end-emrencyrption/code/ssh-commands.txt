@@ -1,0 +1,4 @@
+ssh-add -K ~/your-key-pair.pem #add private key pair to keychain 
+ssh-add -L #verify the keys available to ssh-agent
+ssh -A ec2-user@bastion-instance-public-dns #login on bastion
+ssh hadoop@hadoop-master-private-ip #from bastion, jump onto master node of EMR 
