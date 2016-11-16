@@ -1,0 +1,8 @@
+[
+  {
+    "Classification": "hdfs-encryption-zones",
+    "Properties": {
+      "/": "hdfs_root_encryption"
+    }
+  }
+]
