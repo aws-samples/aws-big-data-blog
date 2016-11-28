@@ -73,13 +73,15 @@ rdf = hive_context.table(hivetablename)
 Converting to Parquet
 ```
 codec='snappy'
-df.repartition(*partitionby).write.partitionBy(partitionby).mode("append").parquet(output,compression=codec)
+df.repartition(*partitionby).write.partitionBy(partitionby).mode("append")\
+   .parquet(output,compression=codec)
 ```
 
 This could have been changed to write the final output in ORC instead of Parquet.
 ```
 codec='zlib'
-df.repartition(*partitionby).write.partitionBy(partitionby).mode("append").orc(output,compression=codec)
+df.repartition(*partitionby).write.partitionBy(partitionby).mode("append")\
+  .orc(output,compression=codec)
 ```
 
 Using Python native threads to orchestrate each batch of 4 months. Our thread pool has only 1 thread, this could have been made larger to process batches in parallel.
