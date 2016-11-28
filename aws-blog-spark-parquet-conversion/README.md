@@ -73,7 +73,7 @@ hive_context = HiveContext(sc)
 rdf = hive_context.table(hivetablename)
 ```
 
-Converting to Parquet
+Writing output to Parquet
 ```
 codec='snappy'
 df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
