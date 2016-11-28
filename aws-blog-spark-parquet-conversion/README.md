@@ -60,6 +60,7 @@ We will SSH to the master node and create the Hive table and submit the spark jo
 ```
 $> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
 hive -f createTable.sql
+hive -f addpartitions.sql
 spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
