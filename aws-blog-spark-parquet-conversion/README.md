@@ -59,9 +59,9 @@ Local $> ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@
 We will SSH to the master node and create the Hive table and submit the spark job. Execute the DDL to create the Hive External table in Hive, and then copy the script convert2.parquet.py to the master node. Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
 Local $> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
-EMR $> hive -f createTable.sql
-EMR $> hive -f addpartitions.sql
-EMR $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
+EMR   $> hive -f createTable.sql
+EMR   $> hive -f addpartitions.sql
+EMR   $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
 ### Script Overview 
