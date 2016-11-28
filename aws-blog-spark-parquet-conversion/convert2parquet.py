@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pyspark.sql import SparkSession
 
 def write2parquet(start):
-   #filter records only for 3 months 
+   #filter records only for 4 months 
    df=rdf.filter((rdf.month >= start) & (rdf.month <= start+3))
    df.repartition(*partitionby).write.partitionBy(partitionby).mode("append").parquet(output,compression=codec)
 
