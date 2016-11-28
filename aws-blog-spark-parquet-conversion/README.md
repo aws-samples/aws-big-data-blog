@@ -1,6 +1,6 @@
-# Converting a large dataset to the Parquet format
+# Converting a large dataset to Parquet
 
-This is a Spark script that can read data from a Hive table and convert the dataset to the Parquet format. We will be using a combination of Spark and Python native threads to convert a 1 TB CSV dataset to Parquet in batches. Our dataset is 1 year of ELB log data in S3, and we will be converting this dataset to Parquet in 3 batches, each batch comprising of 4 months of data.
+This is a Spark script that can read data from a Hive table and convert the dataset to the Parquet format. We will be using a combination of Spark and Python native threads to convert a 1 TB CSV dataset to Parquet in batches. Our sample dataset is 1 year of ELB log data in S3, and we will be converting this dataset to Parquet in 3 batches, each batch comprising of 4 months of data. As we are reading the data from a Hive Table, we can use this script to convert CSV, TSV, JSON or any Hive supported format to Parquet or ORC files.
 
 ## Prerequisites
 - Amazon Web Services account
@@ -94,5 +94,4 @@ Copying the output back to S3. You can then define a Hive external table over th
 ```
 s3-dist-cp --src="hdfs:///user/hadoop/elblogs_pq" --dest="s3://<<BUCKET>>/<<PREFIX>>" 
 ```
-
 
