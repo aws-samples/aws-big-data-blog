@@ -1,6 +1,6 @@
-# Converting a large dataset to Parquet
+#" Converting a large dataset to Parquet
 
-This is a Spark script that can read data from a Hive table and convert the dataset to the Parquet format. We will be using a combination of Spark and Python native threads to convert a 1 TB CSV dataset to Parquet in batches. Our sample dataset is 1 year of ELB log data in S3, and we will be converting this dataset to Parquet in 3 batches, each batch comprising of 4 months of data. As we are reading the data from a Hive Table, we can use this script to convert CSV, TSV, JSON or any Hive supported format to Parquet or ORC files.
+This is a Spark script that can read data from a Hive table and convert the dataset to the Parquet format. We will be using a combination of Spark and Python native threads to convert a 1 TB CSV dataset to Parquet in batches. Our sample dataset is 1 year of ELB log data in S3 available as a Hive External Table, and we will be converting this dataset to Parquet in 3 batches, each batch comprising of 4 months of data. As we are reading the data from a Hive Table, we can use this script to convert CSV, TSV, JSON or any Hive supported format to Parquet or ORC files.
 
 ## Prerequisites
 - Amazon Web Services account
@@ -56,7 +56,7 @@ ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -L 8192:<<master-public-
 
 ### Running the example
 We will SSH to the master node and submit the spark job. Copy the script convert2.parquet.py to the master node.
-Spark Executors are distributed agents that execute tasks. For this example, we will be allocating 85 executors with 5 GB memory each to process each batch of data.
+Spark Executors are distributed agents that execute tasks. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
 spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
