@@ -64,7 +64,7 @@ EMR $> hive -f addpartitions.sql
 EMR $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
-#### Overview of Script
+### Overview of Script
 Reading the Hive Table into a Spark DataFrame.
 ```
 hivetablename='default.elb_logs_raw_part'
@@ -94,7 +94,9 @@ futures.append(pool.submit(write2parquet, i))
 
 ```
 
-Copying the output back to S3. You can then define a Hive external table over this data.
+### Copying the output back to S3. 
+
+We use s3-dist-cp to copy the output back to S3. You can then define a Hive external table over this data.
 ```
 EMR $> s3-dist-cp --src="hdfs:///user/hadoop/elblogs_pq" --dest="s3://<<BUCKET>>/<<PREFIX>>" 
 ```
