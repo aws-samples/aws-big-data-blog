@@ -1,4 +1,4 @@
-## Converting a large dataset to Parquet
+# Converting a large dataset to Parquet
 
 This is a Spark script that can read data from a Hive table and convert the dataset to the Parquet format. We will be using a combination of Spark and Python native threads to convert a 1 TB CSV dataset to Parquet in batches. Our sample dataset is 1 year of ELB log data in S3 available as a Hive External Table, and we will be converting this dataset to Parquet in 3 batches, each batch comprising of 4 months of data. As we are reading the data from a Hive Table, we can use this script to convert CSV, TSV, JSON or any Hive supported format to Parquet or ORC files.
 
@@ -8,7 +8,7 @@ This is a Spark script that can read data from a Hive table and convert the data
 
 #### Launching a Spark cluster in AWS EMR
 
-You can either launch a Spark cluster from the AWS console or using the AWS CLI as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. This will ensure that The memory avalable to the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS storage volumes to ensure we can accomodate the intermediate and output data in HDFS.
+You can either launch a Spark cluster from the AWS console or using the AWS CLI as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. This will ensure that The memory avalable to the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS storage volumes to ensure we can accomodate the intermediate and output data in HDFS. Please ensure that the EMR Master Security Group allows you SSH access.
 
 ```
 aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Ganglia Name=Tez \
@@ -56,10 +56,10 @@ ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@<<master-
 
 ### Running the sample script
 
-We will SSH to the master node and submit the spark job. Copy the script convert2.parquet.py to the master node.
-Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
+We will SSH to the master node and create the Hive table and submit the spark job. Execute the DDL to create the Hive External table in Hive, and then copy the script convert2.parquet.py to the master node. Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
 $> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
+hive -f createTable.sql
 spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
