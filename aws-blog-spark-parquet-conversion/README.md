@@ -6,9 +6,9 @@ This is a Spark script that can read data from a Hive table and convert the data
 - Amazon Web Services account
 - [AWS Command Line Interface (CLI)]
 
-#### Launching cluster
+#### Launching a Spark cluster in AWS EMR
 
-You can either launch a Spark cluster from the console or using the cli as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. The memory of the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS Storage to ensure we can accomodate the output data in HDFS.
+You can either launch a Spark cluster from the AWS console or using the AWS CLI as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. This will ensure that The memory avalable to the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS storage volumes to ensure we can accomodate the intermediate and output data in HDFS.
 
 ```
 aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Ganglia Name=Tez \
@@ -49,22 +49,24 @@ aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Gang
 --region us-east-1
 ```
 
-##### Creating SSH Tunnel
+##### Creating SSH Tunnel to the EMR Master Node
 ```
-ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -L 8192:<<master-public-dns-name>>:8192 hadoop@<<master-public-dns-name>>
+ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@<<master-public-dns-name>>
 ```
 
-### Running the example
+### Running the sample script
+
 We will SSH to the master node and submit the spark job. Copy the script convert2.parquet.py to the master node.
-Spark Executors are distributed agents that execute tasks. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
+Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
+$> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
 spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
 #### Overview of Script
 Reading the Hive Table into a Spark DataFrame.
 ```
-hivetablename='default.elb_logs_raw'
+hivetablename='default.elb_logs_raw_part'
 sc = SparkContext(conf=conf)
 hive_context = HiveContext(sc)
 rdf = hive_context.table(hivetablename)
@@ -77,14 +79,14 @@ df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
    .parquet(output,compression=codec)
 ```
 
-This could have been changed to write the final output in ORC instead of Parquet.
+The script can be eaily changed to write the final output in ORC files instead of Parquet.
 ```
 codec='zlib'
 df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
   .orc(output,compression=codec)
 ```
 
-Using Python native threads to orchestrate each batch of 4 months. Our thread pool has only 1 thread, this could have been made larger to process batches in parallel.
+The script uses Python native threads to orchestrate each batch of 4 months. This ensures that we read only enough data in each batch that fits into the memory of the cluster. Our Python thread pool has only 1 thread to process one batch at any one time, This could have been made larger to process batches in parallel.
 ```
 futures=[]
 pool = ThreadPoolExecutor(1)
@@ -96,4 +98,3 @@ Copying the output back to S3. You can then define a Hive external table over th
 ```
 s3-dist-cp --src="hdfs:///user/hadoop/elblogs_pq" --dest="s3://<<BUCKET>>/<<PREFIX>>" 
 ```
-
