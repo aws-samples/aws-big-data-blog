@@ -6,7 +6,7 @@ This is a Spark script that can read data from a Hive table and convert the data
 - Amazon Web Services account
 - [AWS Command Line Interface (CLI)]
 
-#### Launching a AWS EMR Spark cluster
+#### Launching an AWS EMR Spark cluster
 
 You can either launch a Spark cluster from the AWS console or using the AWS CLI as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. This will ensure that The memory avalable to the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS storage volumes to ensure we can accomodate the intermediate and output data in HDFS. Please ensure that the EMR Master Security Group allows you SSH access.
 
