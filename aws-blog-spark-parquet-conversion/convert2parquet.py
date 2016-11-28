@@ -10,7 +10,7 @@ def write2parquet(start):
 partitionby=['year','month','day']
 output='/user/hadoop/elblogs_pq'
 codec='snappy'
-hivetablename='default.elb_logs_raw"'
+hivetablename='default.elb_logs_raw_native_part'
 
 conf = SparkConf().setAppName("Convert2Parquet")
 sc = SparkContext(conf=conf)
