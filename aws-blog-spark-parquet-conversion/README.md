@@ -64,7 +64,7 @@ EMR $> hive -f addpartitions.sql
 EMR $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
-### Overview of Script
+### Script Overview 
 Reading the Hive Table into a Spark DataFrame.
 ```
 hivetablename='default.elb_logs_raw_part'
