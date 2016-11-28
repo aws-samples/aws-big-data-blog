@@ -51,29 +51,28 @@ aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Gang
 
 ##### Creating SSH Tunnel to the EMR Master Node
 ```
-ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@<<master-public-dns-name>>
+Local $> ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@<<master-public-dns-name>>
 ```
 
 ### Running the sample script
 
 We will SSH to the master node and create the Hive table and submit the spark job. Execute the DDL to create the Hive External table in Hive, and then copy the script convert2.parquet.py to the master node. Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
-$> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
-hive -f createTable.sql
-hive -f addpartitions.sql
-spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
+Local $> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
+EMR $> hive -f createTable.sql
+EMR $> hive -f addpartitions.sql
+EMR $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
 #### Overview of Script
 Reading the Hive Table into a Spark DataFrame.
 ```
 hivetablename='default.elb_logs_raw_part'
-sc = SparkContext(conf=conf)
-hive_context = HiveContext(sc)
+
 rdf = hive_context.table(hivetablename)
 ```
 
-Writing output to Parquet
+Writing dataframe to Parquet
 ```
 codec='snappy'
 df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
@@ -87,7 +86,7 @@ df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
   .orc(output,compression=codec)
 ```
 
-The script uses Python native threads to orchestrate each batch of 4 months. This ensures that we read only enough data in each batch that fits into the memory of the cluster. Our Python thread pool has only 1 thread to process one batch at any one time, This could have been made larger to process batches in parallel.
+The script uses Python native threads to orchestrate each batch of 4 months. This ensures that we read only enough data in each batch that fits into the memory of the cluster. Our Python thread pool has only 1 thread to process one batch at any one time, This could have been made larger to process batches in parallel on larger clusters.
 ```
 futures=[]
 pool = ThreadPoolExecutor(1)
@@ -97,5 +96,5 @@ futures.append(pool.submit(write2parquet, i))
 
 Copying the output back to S3. You can then define a Hive external table over this data.
 ```
-s3-dist-cp --src="hdfs:///user/hadoop/elblogs_pq" --dest="s3://<<BUCKET>>/<<PREFIX>>" 
+EMR $> s3-dist-cp --src="hdfs:///user/hadoop/elblogs_pq" --dest="s3://<<BUCKET>>/<<PREFIX>>" 
 ```
