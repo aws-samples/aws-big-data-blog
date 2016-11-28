@@ -73,14 +73,14 @@ rdf = hive_context.table(hivetablename)
 Converting to Parquet
 ```
 codec='snappy'
-df.repartition(*partitionby).write.partitionBy(partitionby).mode("append")\
+df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
    .parquet(output,compression=codec)
 ```
 
 This could have been changed to write the final output in ORC instead of Parquet.
 ```
 codec='zlib'
-df.repartition(*partitionby).write.partitionBy(partitionby).mode("append")\
+df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
   .orc(output,compression=codec)
 ```
 
