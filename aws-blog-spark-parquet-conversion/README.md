@@ -68,7 +68,7 @@ EMR $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 Reading the Hive Table into a Spark DataFrame.
 ```
 hivetablename='default.elb_logs_raw_part'
-
+spark = SparkSession.builder.appName("Convert2Parquet").enableHiveSupport().getOrCreate()
 rdf = hive_context.table(hivetablename)
 ```
 
