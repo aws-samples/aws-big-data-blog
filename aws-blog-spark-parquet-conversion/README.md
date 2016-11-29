@@ -11,7 +11,7 @@ This is a Spark script that can read data from a Hive table and convert the data
 You can either launch a Spark cluster from the AWS console or using the AWS CLI as below. For this purpose, we will be selecting a cluster of 2 r3.8xlarge nodes. This will ensure that the memory avalable to the cluster will be greater than 333 GB to accomodate 4 months of data in each run. We will also be adding EBS storage volumes to ensure we can accomodate the intermediate and output data in HDFS. Please ensure that the EMR Master Security Group allows you SSH access.
 
 ```
-aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Ganglia Name=Tez \
+aws emr create-cluster --applications Name=Hadoop Name=Hive Name=Spark Name=Tez \
 --ec2-attributes '{  
   "KeyName":"<<KEY NAME>>",
   "InstanceProfile":"EMR_EC2_DefaultRole",
@@ -59,8 +59,8 @@ Local $> ssh -o ServerAliveInterval=10 -i <<credentials.pem>> -N -D 8157 hadoop@
 We will SSH to the master node and create the Hive table and submit the spark job. Execute the DDL to create the Hive External table in Hive, and then copy the script convert2.parquet.py to the master node. Spark Executors are distributed agents that execute Spark tasks in parallel. For this example, we will be allocating 85 executors with 5 GB memory each to process the data.
 ```
 Local $> ssh -i <<credentials.pem>> hadoop@<<master-public-dns-name>>
-EMR   $> hive -f createTable.sql
-EMR   $> hive -f addpartitions.sql
+EMR   $> hive -f createtable.hql
+EMR   $> hive -f addpartitions.hql
 EMR   $> spark-submit  --num-executors 85  --executor-memory 5g convert2parquet.py
 ```
 
