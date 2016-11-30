@@ -8,8 +8,8 @@ java.util.Properties props = new Properties();
 
 //script parameters *** Modify as needed ***
 props.put("s3_staging_dir", "s3://ws-athena-query-results-<account number>/staging/");
-props.put("user", "<access key>");
-props.put("password", "<secret key>");
+props.put("user", "<access key id>");
+props.put("password", "<secret access key>");
 def tablename='default.elb_logs_raw_native_part' //database and table location
 def s3location='s3://athena-examples/elb/raw/'
 def startdate = Date.parse("yyyy-MM-dd", "2015-01-01")
