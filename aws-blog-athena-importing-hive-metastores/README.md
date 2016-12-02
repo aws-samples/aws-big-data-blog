@@ -46,7 +46,7 @@ Database metadata exported to default_export.hql.
 ```
 #### 2. Importing the external tables into Athena
 
-The groovy script 'executescript.py' connects to Athena and executes the Hive script generated above. Please ensure you update the access key and specify a S3 bucket as 's3_staging_dir' in the script.
+The groovy script 'executescript.py' connects to Athena and executes the Hive script generated above. Please ensure you update the access key id, secret access key and specify a S3 bucket as 's3_staging_dir' in the script.
 ```
 EMR $> groovy executescript.gvy <<target database in Athena>> <<Hive script file>>
 ```
