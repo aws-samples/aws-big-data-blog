@@ -4,9 +4,8 @@ def dbDriver = 'com.amazonaws.athena.jdbc.AthenaDriver'
 def dbUrl = 'jdbc:awsathena://athena.us-east-1.amazonaws.com:443/awsdatacatalog/'
 
 java.util.Properties props = new Properties();
-
 //script parameters *** Modify as needed ***
-props.put("s3_staging_dir", "s3://ws-athena-query-results-959874710265/staging/");
+props.put("s3_staging_dir", "s3://ws-athena-query-results-<<account number>>/staging/");
 props.put("user", "<<access key id>>");
 props.put("password", "<<secret access key>>");
 
@@ -36,7 +35,7 @@ dataList.eachWithIndex {elem, i ->
          }
       }
       catch(Exception ex) {
-         println("Caught exception: "+ex);
+         println("Exception: "+ex);
       }
    }
 }
