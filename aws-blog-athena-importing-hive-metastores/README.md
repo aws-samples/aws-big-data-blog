@@ -1,0 +1,109 @@
+### Exporting Hive metastores and Importing External Tables in Athenaa
+
+This documents 2 script that allows
+
+1. To export external tables from a Hive metastore on AWS EMR or elsewhere, as a Hive script.
+2. Executes the Hive script in Athena to import the external tables.
+
+
+#### Prerequisites
+
+Ensure you have a working java 1.8 runtime environment
+Install groovy if not installed
+Set the java classpath to point to the Athena JDBC driver jar location
+
+The above steps on AWS EMR would be:
+
+# set Java to 1.8
+EMR $> export JAVA_HOME=/usr/lib/jvm/java-1.8.0;.
+# Download Groovy and set Groovy binary in PATH
+EMR $> wget https://dl.bintray.com/groovy/maven/apache-groovy-binary-2.4.7.zip
+EMR $> unzip apache-groovy-binary-2.4.7.zip
+EMR $> export PATH=$PATH:./groovy-2.4.7/bin/:
+# Download latest Athena JDBC driver and set it in JAVA CLASSPATH
+EMR $> aws s3 cp s3://athena-downloads/drivers/AthenaJDBC41-1.0.0.jar .
+EMR $> export CLASSPATH=./AthenaJDBC41-1.0.0.jar:;
+
+
+#### Running the Script
+
+##### Exporting External tables from Hive metastore
+
+The python script exportdatabase.py exports external tables only from the Hive metastore to a local file as a Hive script. 
+
+EMR $> python exportdatabase.py <<Hive database name>> 
+
+Sample output:
+
+$ python exportdatabase.py default
+
+Found 10 tables in database...
+
+Database metadata exported to default_export.hql.
+
+##### Executing the generated script in Athena
+
+The groovy script connect to Athena and executes the Hive script generated above.
+
+EMR $> groovy executescript.gvy <<target database in Athena>> <<Hive script file>>
+
+Sample output:
+
+$ groovy executescript.gvy playdb default_export.hql 
+
+Found 2 statements in script...
+
+1. Executing :DROP TABLE `nyc_trips_pq`
+
+result : OK
+
+
+2. Executing :
+CREATE EXTERNAL TABLE `nyc_trips_pq`(
+  `vendor_name` string,
+  `trip_pickup_datetime` string,
+  `trip_dropoff_datetime` string,
+  `passenger_count` int,
+  `trip_distance` float,
+  `payment_type` string,
+  `are_amt` float,
+  `surcharge` float,
+  `mta_tax` float,
+  `tip_amt` float,
+  `tolls_amt` float,
+  `total_amt` float)
+PARTITIONED BY (
+  `year` string,
+  `month` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+  LOCATION
+  's3://bucket/dataset2'
+TBLPROPERTIES (
+  'parquet.compress'='SNAPPY',
+  'transient_lastDdlTime'='1478199332')
+
+
+result : OK
+
+
+Please note that the executescript.gvy script can be used to execute any Hive script in Athena. e.g. you can use a script to add parititions to an Athena table which uses a custom partition format.
+
+e.g.
+You can save the following to a Hive file say addpartitions.hql
+
+ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='01') location 's3://athena-examples/elb/raw/2015/01/01';
+ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='02') location 's3://athena-examples/elb/raw/2015/01/02';
+ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='03') location 's3://athena-examples/elb/raw/2015/01/03';
+ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='04') location 's3://athena-examples/elb/raw/2015/01/04';
+
+and execute it as:
+
+EMR $> groovy executescript.gvy default addpartition.hql
+
+
+ 
