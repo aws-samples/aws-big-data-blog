@@ -1,48 +1,50 @@
-# Exporting Hive metastore and Importing External Tables in Athena
+# Exporting External Tables from a Hive metastore and Importing into Athena
 
-This documents 2 script that allows
+This documents 2 script that allows:
 
-1. To export external tables from a Hive metastore on AWS EMR or elsewhere, as a Hive script.
-2. Executes the Hive script in Athena to import the external tables.
+* Exportng external tables from a Hive metastore on AWS EMR or elsewhere, as a Hive script.
+* Executes the Hive script in Athena to import the external tables.
 
 
 ### Pre-requisites
 
-Ensure you have a working java 1.8 runtime environment
-Install groovy if not installed
-Set the java classpath to point to the Athena JDBC driver jar location
+* Ensure you have a working java 1.8 runtime environment
+* Install groovy if not installed
+* Set the java classpath to point to the Athena JDBC driver jar location
 
 The above steps on AWS EMR would be:
 
-# set Java to 1.8
 ```
+# set Java to 1.8
 EMR $> export JAVA_HOME=/usr/lib/jvm/java-1.8.0;.
+
 # Download Groovy and set Groovy binary in PATH
 EMR $> wget https://dl.bintray.com/groovy/maven/apache-groovy-binary-2.4.7.zip
 EMR $> unzip apache-groovy-binary-2.4.7.zip
 EMR $> export PATH=$PATH:./groovy-2.4.7/bin/:
+
 # Download latest Athena JDBC driver and set it in JAVA CLASSPATH
 EMR $> aws s3 cp s3://athena-downloads/drivers/AthenaJDBC41-1.0.0.jar .
 EMR $> export CLASSPATH=./AthenaJDBC41-1.0.0.jar:;
 ```
 
-#### Running the Script
+### Running the Script
 
-##### Exporting External tables from Hive metastore
+#### Exporting External tables from Hive metastore
 
 The python script exportdatabase.py exports external tables only from the Hive metastore to a local file as a Hive script. 
 ```
 EMR $> python exportdatabase.py <<Hive database name>> 
 ```
 Sample output:
-``
+```
 $ python exportdatabase.py default
 
 Found 10 tables in database...
 
 Database metadata exported to default_export.hql.
 ```
-##### Executing the generated script in Athena
+#### Executing the generated script in Athena
 
 The groovy script connect to Athena and executes the Hive script generated above.
 ```
