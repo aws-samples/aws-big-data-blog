@@ -3,7 +3,7 @@
 This documents 2 scripts that allows:
 
 * Exporting external tables from a Hive metastore on AWS EMR or elsewhere, as a Hive script.
-* Executing the Hive script in Athena to import the external tables.
+* Executing the Hive script in Athena over JDBC to import the external tables.
 
 
 ### Pre-requisites
@@ -11,6 +11,7 @@ This documents 2 scripts that allows:
 * Ensure you have a working Java 1.8 runtime environment
 * Install groovy if not installed
 * Set the Java classpath to point to the Athena JDBC driver jar location
+* Ensure you have a working Python 2.7+ environment.
 
 The above steps on AWS EMR would be:
 
@@ -60,7 +61,6 @@ Found 2 statements in script...
 
 result : OK
 
-
 2. Executing :
 CREATE EXTERNAL TABLE `nyc_trips_pq`(
   `vendor_name` string,
@@ -90,11 +90,10 @@ TBLPROPERTIES (
   'parquet.compress'='SNAPPY',
   'transient_lastDdlTime'='1478199332')
 
-
 result : OK
 ```
 
-Please note that the 'executescript.gvy' script can be used to execute any Hive script in Athena. e.g. you can use this script to add parititions to an existing Athena table which uses a custom partition format.
+Please note that the 'executescript.gvy' script can be used to execute any Hive script in Athena. e.g. you can use this script to add partitions to an existing Athena table which uses a custom partition format.
 
 You can save the following to a file `addpartitions.hql`
 ```
@@ -113,18 +112,15 @@ Found 4 statements in script...
 
 result : OK
 
-
 2. Executing :
 ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='02') location 's3://athena-examples/elb/raw/2015/01/02'
 
 result : OK
 
-
 3. Executing :
 ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='03') location 's3://athena-examples/elb/raw/2015/01/03'
 
 result : OK
-
 
 4. Executing :
 ALTER TABLE default.elb_logs_raw_native_part ADD PARTITION (year='2015',month='01',day='04') location 's3://athena-examples/elb/raw/2015/01/04'
@@ -133,6 +129,9 @@ result : OK
 
 ```
 
-A sample createtable.hql and addparitions.hql is included in the repo that you can use to test the 'executescript.gvy' script.
-
-
+A sample sample_createtable.hql and sample_addpartitions.hql is included in the repo that you can use to test the 'executescript.gvy' script. You can run them as below to create the table and add partitions to it in Athena.
+```
+$> groovy executescript.gvy default sample_createtable.hql
+$> groovy executescript default sample_addpartitions.hql
+```
+  
