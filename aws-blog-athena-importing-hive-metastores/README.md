@@ -133,6 +133,6 @@ result : OK
 
 ```
 
-A sample createtable.hql and addparitions.hql is included in the repo that you can use to test the 'executescript.gvy.
+A sample createtable.hql and addparitions.hql is included in the repo that you can use to test the 'executescript.gvy' script.
 
 
