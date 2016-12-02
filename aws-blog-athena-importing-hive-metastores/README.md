@@ -3,7 +3,7 @@
 This documents 2 scripts that allows:
 
 * Exporting external tables from a Hive metastore on AWS EMR or elsewhere, as a Hive script.
-* Executes the Hive script in Athena to import the external tables.
+* Executing the Hive script in Athena to import the external tables.
 
 
 ### Pre-requisites
