@@ -62,5 +62,8 @@ if __name__ == "__main__":
 
     athena_df.write.mode('overwrite').parquet(args.output_s3_path)
 
-    sc.stop()
+    try:
+        sc.stop()
+    finally:
+        sc.stop()
 
