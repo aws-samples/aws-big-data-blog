@@ -1,4 +1,4 @@
-# Derive Insights from IoT in minutes using AWS IoT, Amazon Kinesis Firehose, Amazon Athena, and Amazon QuickSight
+# Message Generator for - Derive Insights from IoT in minutes using AWS IoT, Amazon Kinesis Firehose, Amazon Athena, and Amazon QuickSight
 
 This is the code repository for code sample used in AWS Big data blog 
 
