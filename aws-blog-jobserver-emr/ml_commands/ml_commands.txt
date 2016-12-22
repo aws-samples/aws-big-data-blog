@@ -1,0 +1,31 @@
+
+# make sure the server is running with the ml-context defined (Spark Context)
+
+# copy the jar onto the cluster
+aws s3 cp s3://dgraeberaws-blogs/ml/jobserver/jobserverEmr-1.0.jar jobserverEmr-1.0.jar
+
+
+# Load the jar onto the server with teh app name ml
+curl --data-binary @jobserverEmr-1.0.jar 'localhost:8090/jars/ml'
+
+
+#TEST
+curl -d "{s3DataLoc:\"s3://dgraeberaws-blogs/ml/data/movielens/small/\",s3ModelLoc:\"s3://dgraeberaws-blogs/ml/models/movielens/recommendations/\"}" \
+'localhost:8090/jobs?appName=ml&classPath=com.amazonaws.proserv.ml.TestParams&context=ml-context&sync=true'
+
+#Load the model and data
+curl -d "{s3DataLoc:\"s3://dgraeberaws-blogs/ml/data/movielens/small/\",s3ModelLoc:\"s3://dgraeberaws-blogs/ml/models/movielens/recommendations/\"}" \
+'localhost:8090/jobs?appName=ml&classPath=com.amazonaws.proserv.ml.LoadModelAndData&context=ml-context'
+
+#Get the 10 ten movies for userId=100
+curl -d "{userId:100}"  'localhost:8090/jobs?appName=ml&classPath=com.amazonaws.proserv.ml.MoviesRec&context=ml-context&sync=true&timeout=150'
+
+#Get the top 5 movies in the Comedy Genre
+curl -d "{userId:100,genre:\"Comedy\"}"  'localhost:8090/jobs?appName=ml&classPath=com.amazonaws.proserv.ml.MoviesRecByGenre&context=ml-context&sync=true&timeout=150'
+
+
+
+
+
+
+

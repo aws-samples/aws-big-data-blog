@@ -1,0 +1,44 @@
+Using the ML part of this Project
+
+NOTES:
+ - POM was updated to use spark 1.6.2 - use the pom attached
+ - the context needs to be a Spark Context (not Hive or SparkSQl context)
+ - the ml_commands file has sample execution commands
+ - the Scala Src File is located at com.amazonaws.proserv.ml.MovieRecML.scala
+
+To create the cluster
+- proceed to create a JobServer cluster as you normally would (see blogpost)
+- in /mnt/lib/spark-jobserver the context file (emr.conf) needs to be set to create a new Spark Context
+  -- the file at <project>/jobserver_configs/emr_contexts_ml.conf file reflect the proper change to use the SparkContext
+  -- you can manually edit the emr.conf on the server, replace it with the emr_contexts.conf (naming it emr.conf) or reference this file in your BA
+
+
+
+Once the Cluster is created, there are three access point (you MUST load the data first - only once necessary)
+- com.amazonaws.proserv.ml.LoadModelAndData
+ -- this entry point Loads the Mode Data from S3 and the Movies Data
+ -- BOTH paths MUST end in a trailing back slash /
+ -- see the sample commands for execution
+ -- it takes JSON as input
+ Example
+       {
+            s3DataLoc:\"s3://dgraeberaws-blogs/ml/data/movielens/small/\",
+            s3ModelLoc:\"s3://dgraeberaws-blogs/ml/models/movielens/recommendations/\"
+       }
+
+- com.amazonaws.proserv.ml.MoviesRec - this entry point will give the top 10 movies for the user id passed in
+ -- it takes a parameter 'userId' - in the test cases it was 100
+ -- it takes JSON as input
+  Example
+        {
+             userId: 100
+        }
+
+- com.amazonaws.proserv.ml.MoviesRecByGenre - this entry point will give the top 5 movies for a userId and a given Genre
+    -- it takes a parameter 'userId' - in the test cases it was 100
+    -- it takes JSON as input
+    Example
+        {
+             userId: 100,
+             "genre" :"Comedy"
+        }

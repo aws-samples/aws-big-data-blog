@@ -1,9 +1,13 @@
 This project is for using JobServer with EMR
 - it provides BA's for installing JobServer and a simple project for benchmarking
 - this is to supplement a big data blogpost - Installing and Running JobServer for Apache Spark on Amazon EMR
-    -- the post goes into detail all the steps necessary to set up
+    -- the post goes into detail all the steps necessary to set up 
 
 
+This project also supports the big data blogpost - Serving Real-Time Machine Learning Predictions on Amazon EMR
+ - see under the <project>/ml_commands/README
+	
+	
 You MUST be familiar with JobServer
 - https://github.com/spark-jobserver/spark-jobserver
 - https://github.com/spark-jobserver/spark-jobserver/blob/master/doc/EMR.md
