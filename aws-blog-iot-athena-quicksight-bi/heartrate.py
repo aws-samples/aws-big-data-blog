@@ -4,26 +4,26 @@ import datetime
 import boto3
 import time
 
-highHeartrateNames = ["Bailey", "Beatrice", "Beau", "Bella", "Ben", "Beth"]
-nonhighHeartrateNames = ["Branden", "Brady", "Bonny"]
+highHeartrateNames = ['Bailey', 'Beatrice', 'Beau', 'Bella', 'Ben', 'Beth']
+nonhighHeartrateNames = ['Branden', 'Brady', 'Bonny']
 
 allNames = list(set().union(highHeartrateNames, nonhighHeartrateNames))
 
 iot = boto3.client('iot-data');
 
-# generate normal heart rate with probability .99
+# generate normal heart rate with probability .95
 def getNormalHeartRate():
     data = {}
     data['heartRate'] = random.randint(60, 100)
-    data['rateType'] = "NORMAL"
+    data['rateType'] = 'NORMAL'
     data['userId'] = random.choice(allNames)
     data['dateTime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return data
-# generate high heart rate with probability .01 (very few)
+# generate high heart rate with probability .05 (very few)
 def getHighHeartRate():
     data = {}
     data['heartRate'] = random.randint(150, 200)
-    data['rateType'] = "HIGH"
+    data['rateType'] = 'HIGH'
     data['userId'] =  random.choice(highHeartrateNames)
     data['dateTime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return data
