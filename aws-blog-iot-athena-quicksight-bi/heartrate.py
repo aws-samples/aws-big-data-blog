@@ -15,7 +15,7 @@ iot = boto3.client('iot-data');
 def getNormalHeartRate():
     data = {}
     data['heartRate'] = random.randint(60, 100)
-    data['rateType'] = "NORMAL"
+    data['rateType'] = 'NORMAL'
     data['userId'] = random.choice(allNames)
     data['dateTime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return data
@@ -23,7 +23,7 @@ def getNormalHeartRate():
 def getHighHeartRate():
     data = {}
     data['heartRate'] = random.randint(150, 200)
-    data['rateType'] = "HIGH"
+    data['rateType'] = 'HIGH'
     data['userId'] =  random.choice(highHeartrateNames)
     data['dateTime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return data
@@ -31,7 +31,7 @@ def getHighHeartRate():
 while True:
     time.sleep(1)
     rnd = random.random()
-    if (rnd < 0.05):
+    if (rnd < 0.01):
         data = json.dumps(getHighHeartRate())
         print data
         response = iot.publish(
