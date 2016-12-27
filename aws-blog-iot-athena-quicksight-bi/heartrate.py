@@ -4,8 +4,8 @@ import datetime
 import boto3
 import time
 
-highHeartrateNames = ["Bailey", "Beatrice", "Beau", "Bella", "Ben", "Beth"]
-nonhighHeartrateNames = ["Branden", "Brady", "Bonny"]
+highHeartrateNames = ['Bailey', 'Beatrice', 'Beau', 'Bella', 'Ben', 'Beth']
+nonhighHeartrateNames = ['Branden', 'Brady', 'Bonny']
 
 allNames = list(set().union(highHeartrateNames, nonhighHeartrateNames))
 
