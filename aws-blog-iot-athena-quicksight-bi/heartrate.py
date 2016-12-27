@@ -11,7 +11,7 @@ allNames = list(set().union(highHeartrateNames, nonhighHeartrateNames))
 
 iot = boto3.client('iot-data');
 
-# generate normal heart rate with probability .99
+# generate normal heart rate with probability .95
 def getNormalHeartRate():
     data = {}
     data['heartRate'] = random.randint(60, 100)
@@ -19,7 +19,7 @@ def getNormalHeartRate():
     data['userId'] = random.choice(allNames)
     data['dateTime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return data
-# generate high heart rate with probability .01 (very few)
+# generate high heart rate with probability .05 (very few)
 def getHighHeartRate():
     data = {}
     data['heartRate'] = random.randint(150, 200)
@@ -31,7 +31,7 @@ def getHighHeartRate():
 while True:
     time.sleep(1)
     rnd = random.random()
-    if (rnd < 0.01):
+    if (rnd < 0.05):
         data = json.dumps(getHighHeartRate())
         print data
         response = iot.publish(
