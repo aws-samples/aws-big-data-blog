@@ -8,21 +8,15 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-#sjs = client.Client("http://ec2-54-172-7-213.compute-1.amazonaws.com:8090")
 sjs = client.Client("http://jobserver.ml-test-blog.internal:8090")
 myApp = sjs.apps.get("ml")
 myContext = sjs.contexts.get("ml-context")
 
 def testHandler(event, context):
-    #checkIncoming(event,context)
     logger.info('got event{}'.format(event))
-    #conf = "{s3DataLoc:\"s3://dgraeberaws-blogs/ml/data/movielens/small/\",s3ModelLoc:\"s3://dgraeberaws-blogs/ml/models/movielens/recommendations/\"}"
-    #conf = '{'+'s3DataLoc:{},s3ModelLoc:{}'.format(s3DataLoc,s3ModelLoc)+'}'
-
     s3DataLocProtocol = "\"s3://{}\"".format(event['s3DataLoc'])
     s3ModelLocProtocol = "\"s3://{}\"".format(event['s3ModelLoc'])
     conf = '{'+'s3DataLoc:{},s3ModelLoc:{}'.format(s3DataLocProtocol,s3ModelLocProtocol)+'}'
-
     class_path = "com.amazonaws.proserv.ml.TestParams"
     myJob = sjs.jobs.create(myApp, class_path, conf = conf, ctx = myContext)
     myId = myJob.jobId
@@ -34,12 +28,10 @@ def testHandler(event, context):
     }
 
 def loadHandler(event, context):
-    #checkIncoming(event,context)
     logger.info('got event{}'.format(event))
     s3DataLocProtocol = "\"s3://{}\"".format(event['s3DataLoc'])
     s3ModelLocProtocol = "\"s3://{}\"".format(event['s3ModelLoc'])
     conf = '{'+'s3DataLoc:{},s3ModelLoc:{}'.format(s3DataLocProtocol,s3ModelLocProtocol)+'}'
-
     class_path = "com.amazonaws.proserv.ml.LoadModelAndData"
     myJob = sjs.jobs.create(myApp, class_path, conf = conf, ctx = myContext)
     myId = myJob.jobId
@@ -49,11 +41,9 @@ def loadHandler(event, context):
 
 
 def recommenderHandler(event, context):
-    #checkIncoming(event,context)
     logger.info('got event{}'.format(event))
     userId = event['userId']
     conf = '{'+'userId:{}'.format(userId)+'}'
-
     class_path = "com.amazonaws.proserv.ml.MoviesRec"
     myJob = sjs.jobs.create(myApp, class_path, conf = conf, ctx = myContext)
     myId = myJob.jobId
@@ -65,7 +55,6 @@ def recommenderHandler(event, context):
     }
 
 def genreHandler(event, context):
-    #checkIncoming(event,context)
     logger.info('got event{}'.format(event))
     userId = event['userId']
     genre = event['genre']
@@ -80,18 +69,11 @@ def genreHandler(event, context):
         'result' : sjs.jobs.get(myId).result,
     }
 
-def checkIncoming(event, context):
-    logger.info('got event{}'.format(event))
-    logger.info('userId {}'.format(event['userId']))
-    logger.info('genre {}'.format(event['genre']))
-    logger.info('s3ModelLoc {}'.format(event['s3ModelLoc']))
-    logger.info('s3DateLoc {}'.format(event['s3DataLoc']))
-
-
-
 if __name__ == '__main__':
     event = 'none'
     context = 'none'
+
+    #Uncomment the follwing lines to test...one at a time
     #print(testHandler(event, context))
     #print(loadHandler(event, context))
     #print(recommenderHandler(event, context))

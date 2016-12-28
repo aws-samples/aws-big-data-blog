@@ -39,7 +39,6 @@
    },
 
   "Resources":{
-
     "sgEMRMasterAdditional": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -50,7 +49,6 @@
         ]
       }
     },
-
     "sgLambda": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -61,16 +59,13 @@
         ]
       }
     },
-
     "sgIngressLambdaToMaster": {
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
         "GroupId": {"Ref": "sgEMRMasterAdditional"},"IpProtocol": "-1", "FromPort": "0", "ToPort": "65535", "SourceSecurityGroupId":{"Ref": "sgLambda"}
       }
     },
-
-
-     "emrCluster": {
+   "emrCluster": {
       "Type": "AWS::EMR::Cluster",
       "Properties": {
         "Instances": {
@@ -117,9 +112,7 @@
           }
         ]
       }
-
     },
-
     "stepStartServer": {
       "Type": "AWS::EMR::Step",
       "DependsOn": "emrCluster",
@@ -137,10 +130,6 @@
         }
       }
     },
-
-
-
-
     "roleLambda": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -188,7 +177,6 @@
         ]
       }
     },
-
     "lambdaLoadHandler": {
       "Type": "AWS::Lambda::Function",
       "DependsOn": ["roleLambda"],
@@ -214,7 +202,6 @@
         }
       }
     },
-
     "lambdaRecommenderHandler": {
       "Type": "AWS::Lambda::Function",
       "DependsOn": ["roleLambda"],
@@ -240,7 +227,6 @@
         }
       }
     },
-
     "lambdaGenreHandler": {
       "Type": "AWS::Lambda::Function",
       "DependsOn": ["roleLambda"],
@@ -281,7 +267,6 @@
         }
       }
     },
-
     "dnsInternalDNS" : {
       "Type" : "AWS::Route53::RecordSet",
       "DependsOn":["dnsHostedZone","emrCluster"],
@@ -294,7 +279,6 @@
         "ResourceRecords" : [{ "Fn::GetAtt": ["emrCluster","MasterPublicDNS" ]}]
       }
     }
-
   },
   "Outputs" : {
     "EMRCluster" : {
@@ -318,6 +302,5 @@
       "Description" : "ARN of Lambda to get user recommendations",
       "Value" : { "Fn::GetAtt": ["lambdaRecommenderHandler","Arn" ]}
     }
-
   }
 }
