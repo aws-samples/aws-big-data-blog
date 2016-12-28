@@ -1,0 +1,6 @@
+{
+  "userId": 100,
+  "genre": "Comedy",
+  "s3DataLoc": "dgraeberaws-blogs/ml/data/movielens/small/",
+  "s3ModelLoc": "dgraeberaws-blogs/ml/models/movielens/recommendations/"
+}

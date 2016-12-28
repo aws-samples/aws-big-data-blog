@@ -1,0 +1,306 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "myVPCID" :{
+      "Type":"String",
+      "Default":"vpc-b101bdd4",
+      "MinLength" :"1"
+    },
+    "mySubnetID" :{
+      "Type":"String",
+      "Default":"subnet-57c5da7f",
+      "MinLength" :"1"
+    },
+    "myEMRKeyPair" : {
+        "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+        "Type": "AWS::EC2::KeyPair::KeyName",
+        "ConstraintDescription": "must be the name of an existing EC2 KeyPair"
+      },
+    "myBaJobserverLoc" : {
+      "Default" : "s3://dgraeberaws-blogs/jobserver/BA/install_jobserver_ML_BA.sh",
+      "Type" : "String",
+      "Description" : "The location on S3 of the BA to install Jobserver"
+    },
+    "myStepStartJobServerLoc" : {
+      "Default" : "s3://dgraeberaws-blogs/jobserver/BA/startServer.sh",
+      "Type" : "String",
+      "Description" : "The location on S3 of the BA to install Jobserver"
+    },
+    "myLambdaS3BucketName" : {
+      "Default" :  "dgraeberaws-blogs",
+      "Type" : "String",
+      "Description" : "The Bucket on S3 where your Python Lambda is located"
+    },
+    "myLambdaS3BucketKey" : {
+      "Default" :  "ml/lambda/python_lambda.zip",
+      "Type" : "String",
+      "Description" : "The Key on S3 where your Python Lambda is located"
+    }
+   },
+
+  "Resources":{
+    "sgEMRMasterAdditional": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "EMR Master Group",
+        "VpcId": {"Ref" : "myVPCID"},
+        "SecurityGroupIngress":[
+          {"IpProtocol": "tcp","FromPort": "22","ToPort": "22","CidrIp": "0.0.0.0/0"}
+        ]
+      }
+    },
+    "sgLambda": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "LambdaSG",
+        "VpcId": {"Ref" : "myVPCID"},
+        "SecurityGroupEgress":[
+          {"IpProtocol": "-1","FromPort": "0","ToPort": "65535","CidrIp": "0.0.0.0/0"}
+        ]
+      }
+    },
+    "sgIngressLambdaToMaster": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {"Ref": "sgEMRMasterAdditional"},"IpProtocol": "-1", "FromPort": "0", "ToPort": "65535", "SourceSecurityGroupId":{"Ref": "sgLambda"}
+      }
+    },
+   "emrCluster": {
+      "Type": "AWS::EMR::Cluster",
+      "Properties": {
+        "Instances": {
+          "MasterInstanceGroup": {
+            "InstanceCount": 1,
+            "InstanceType": "r3.xlarge",
+            "Market": "ON_DEMAND",
+            "Name": { "Fn::Join" : ["-", ["JobServer",{ "Ref" : "AWS::StackName" }]]}
+          },
+          "CoreInstanceGroup": {
+            "InstanceCount": "5",
+            "InstanceType": "r3.xlarge",
+            "Market": "ON_DEMAND",
+            "Name": "cfnCore"
+          },
+          "TerminationProtected" : "false",
+          "Ec2KeyName" : { "Ref" : "myEMRKeyPair"},
+          "Ec2SubnetId" : { "Ref" : "mySubnetID" },
+          "AdditionalMasterSecurityGroups":[
+            {"Ref":"sgEMRMasterAdditional"}
+          ]
+        },
+        "Name": "cfn-EMR-Spark",
+        "JobFlowRole" : "EMR_EC2_DefaultRole",
+        "ServiceRole" : "EMR_DefaultRole",
+        "ReleaseLabel" : "emr-4.7.1",
+        "Applications" : [
+          {"Name" : "Spark" },
+          {"Name" : "Hadoop" },
+          {"Name" : "Hive" }
+        ],
+        "BootstrapActions":[
+          {
+            "Name": "Install JobServer",
+            "ScriptBootstrapAction": {
+                "Path":{"Ref":"myBaJobserverLoc"}
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Fn::Join" : ["-", ["EMR-Spark-JobServer-ML",{ "Ref" : "AWS::StackName" }]]}
+          }
+        ]
+      }
+    },
+    "stepStartServer": {
+      "Type": "AWS::EMR::Step",
+      "DependsOn": "emrCluster",
+      "Properties": {
+        "ActionOnFailure": "CONTINUE",
+        "HadoopJarStep": {
+          "Args": [
+            {"Ref":"myStepStartJobServerLoc"}
+          ],
+          "Jar": "s3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar"
+        },
+        "Name": "StartJobServerStep",
+        "JobFlowId": {
+          "Ref": "emrCluster"
+        }
+      }
+    },
+    "roleLambda": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": ["lambda.amazonaws.com"]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "policyLambda": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "LambdaJobServerPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["logs:*"],
+              "Resource": ["arn:aws:logs:*:*:*"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:*"],
+              "Resource": ["arn:aws:s3:::*"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["ec2:*","lambda:*"],
+              "Resource": ["*" ]
+            }
+          ]
+        },
+        "Roles": [
+          { "Ref": "roleLambda" }
+        ]
+      }
+    },
+    "lambdaLoadHandler": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": ["roleLambda"],
+      "Properties": {
+        "Handler": "models.loadHandler",
+        "Role": {
+          "Fn::GetAtt": ["roleLambda", "Arn"]
+        },
+        "Code": {
+          "S3Bucket": {"Ref":"myLambdaS3BucketName"},
+          "S3Key": {"Ref":"myLambdaS3BucketKey"}
+        },
+        "Runtime": "python2.7",
+        "Timeout": "30",
+        "FunctionName":  { "Fn::Join" : ["-", ["loadHandlerML",{ "Ref" : "AWS::StackName" }]]},
+        "Description": "Handler for ML Load on JobServer",
+        "MemorySize": "128",
+        "VpcConfig": {
+          "SecurityGroupIds": [{"Ref": "sgLambda"}
+          ],
+          "SubnetIds": [{ "Ref": "mySubnetID"}
+          ]
+        }
+      }
+    },
+    "lambdaRecommenderHandler": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": ["roleLambda"],
+      "Properties": {
+        "Handler": "models.recommenderHandler",
+        "Role": {
+          "Fn::GetAtt": ["roleLambda", "Arn"]
+        },
+        "Code": {
+          "S3Bucket": {"Ref":"myLambdaS3BucketName"},
+          "S3Key": {"Ref":"myLambdaS3BucketKey"}
+        },
+        "Runtime": "python2.7",
+        "Timeout": "30",
+        "FunctionName":  { "Fn::Join" : ["-", ["recommenderHandlerML",{ "Ref" : "AWS::StackName" }]]},
+        "Description": "Handler for ML Load on JobServer",
+        "MemorySize": "128",
+        "VpcConfig": {
+          "SecurityGroupIds": [{"Ref": "sgLambda"}
+          ],
+          "SubnetIds": [{ "Ref": "mySubnetID"}
+          ]
+        }
+      }
+    },
+    "lambdaGenreHandler": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": ["roleLambda"],
+      "Properties": {
+        "Handler": "models.genreHandler",
+        "Role": {
+          "Fn::GetAtt": ["roleLambda", "Arn"]
+        },
+        "Code": {
+          "S3Bucket": {"Ref":"myLambdaS3BucketName"},
+          "S3Key": {"Ref":"myLambdaS3BucketKey"}
+        },
+        "Runtime": "python2.7",
+        "Timeout": "30",
+        "FunctionName":  { "Fn::Join" : ["-", ["genreHandlerML",{ "Ref" : "AWS::StackName" }]]},
+        "Description": "Handler for ML Load on JobServer",
+        "MemorySize": "128",
+        "VpcConfig": {
+          "SecurityGroupIds": [{"Ref": "sgLambda"}
+          ],
+          "SubnetIds": [{ "Ref": "mySubnetID"}
+          ]
+        }
+      }
+    },
+    "dnsHostedZone": {
+      "Type": "AWS::Route53::HostedZone",
+      "Properties": {
+        "VPCs": [
+          {
+            "VPCId": { "Ref": "myVPCID"},
+            "VPCRegion": {"Ref":"AWS::Region"}
+          }
+        ],
+        "Name": "ml-test-blog.internal",
+        "HostedZoneConfig": {
+          "Comment": "Internal hosted zone - testing"
+        }
+      }
+    },
+    "dnsInternalDNS" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "DependsOn":["dnsHostedZone","emrCluster"],
+      "Properties" : {
+        "HostedZoneId" : {"Ref":"dnsHostedZone"},
+        "Comment" : "DNS internal",
+        "Name" : { "Fn::Join" : ["", ["jobserver",".", "ml-test-blog.internal" ]]},
+        "Type" : "CNAME",
+        "TTL" : "600",
+        "ResourceRecords" : [{ "Fn::GetAtt": ["emrCluster","MasterPublicDNS" ]}]
+      }
+    }
+  },
+  "Outputs" : {
+    "EMRCluster" : {
+      "Description" : "EMR Cluster DNS",
+      "Value" : { "Fn::GetAtt": ["emrCluster","MasterPublicDNS" ]}
+    },
+    "InternallyHostedDNS":{
+      "Description" : "Internally hosted EMR Cluster DNS",
+      "Value" : { "Fn::Join" : ["", ["jobserver",".", "ml-test-blog.internal" ]]}
+    },
+
+    "LoadDataLambdaARN":{
+      "Description" : "ARN of Lambda to load model and data",
+      "Value" : { "Fn::GetAtt": ["lambdaLoadHandler","Arn" ]}
+    },
+    "GenreLambdaARN":{
+      "Description" : "ARN of Lambda to get genre recommendations",
+      "Value" : { "Fn::GetAtt": ["lambdaGenreHandler","Arn" ]}
+    },
+    "RecommendationLambdaARN":{
+      "Description" : "ARN of Lambda to get user recommendations",
+      "Value" : { "Fn::GetAtt": ["lambdaRecommenderHandler","Arn" ]}
+    }
+  }
+}
