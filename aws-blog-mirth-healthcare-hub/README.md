@@ -25,7 +25,7 @@ mvn clean package
  * dynamoInsertHl7Json: inserts HL7 JSON into Amazon DynamoDB
  * dynamoInsertJson: inserts CCD/CDA JSON into Amazon DynamoDB
  * dynamoInsertDicom: inserts DICOM JSON into Amazon DynamoDB
- * listbucketsitems: lists items in an Amazon S3 bucket
+ * listBucketItems: lists items in an Amazon S3 bucket
  * createTmpFile:  creates a temporary file with text contents 
 
 #####mirth-aws-dicom-app includes public functions:

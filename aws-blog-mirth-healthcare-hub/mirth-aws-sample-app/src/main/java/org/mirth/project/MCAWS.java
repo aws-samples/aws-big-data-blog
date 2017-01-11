@@ -49,7 +49,7 @@ public class MCAWS
     public static void main( String[] args ) {
 	//String bucketName = "mirth-blog-data";
 	System.out.println("Mirth Example Exec");
-	//listbucketsitems(bucketName);
+	//listBucketItems(bucketName);
 
 	//Example for testing CCD:
         //try {
@@ -210,7 +210,7 @@ public class MCAWS
         table.putItem(item);
     }
 
-    public static void listbucketsitems(String bucketName) {
+    public static void listBucketItems(String bucketName) {
 	System.out.println( "Connecting to AWS" );
 	System.out.println( "Listing files in bucket "+ bucketName );
 	AmazonS3 s3 = new AmazonS3Client();
