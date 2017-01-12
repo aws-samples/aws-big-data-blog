@@ -1,0 +1,692 @@
+<channel version="3.4.2">
+  <id>49f9ef42-307c-40fe-b32b-58776a102088</id>
+  <nextMetaDataId>9</nextMetaDataId>
+  <name>DICOM-to-JSON</name>
+  <description></description>
+  <enabled>true</enabled>
+  <lastModified>
+    <time>1483079889754</time>
+    <timezone>America/Los_Angeles</timezone>
+  </lastModified>
+  <revision>53</revision>
+  <sourceConnector version="3.4.2">
+    <metaDataId>0</metaDataId>
+    <name>sourceConnector</name>
+    <properties class="com.mirth.connect.connectors.vm.VmReceiverProperties" version="3.4.2">
+      <pluginProperties/>
+      <sourceConnectorProperties version="3.4.2">
+        <responseVariable>None</responseVariable>
+        <respondAfterProcessing>true</respondAfterProcessing>
+        <processBatch>false</processBatch>
+        <firstResponse>false</firstResponse>
+        <processingThreads>1</processingThreads>
+        <resourceIds class="linked-hash-map">
+          <entry>
+            <string>Default Resource</string>
+            <string>[Default Resource]</string>
+          </entry>
+          <entry>
+            <string>2f02969e-d5fa-4182-880a-19f316ba9faf</string>
+            <string>DICOM Resources</string>
+          </entry>
+        </resourceIds>
+        <queueBufferSize>1000</queueBufferSize>
+      </sourceConnectorProperties>
+    </properties>
+    <transformer version="3.4.2">
+      <steps>
+        <step>
+          <sequenceNumber>0</sequenceNumber>
+          <name>PatientName</name>
+          <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00100010&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;PatientName&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+          <type>Mapper</type>
+          <data>
+            <entry>
+              <string>Variable</string>
+              <string>PatientName</string>
+            </entry>
+            <entry>
+              <string>Mapping</string>
+              <string>msg[&quot;tag00100010&quot;].toString()</string>
+            </entry>
+            <entry>
+              <string>DefaultValue</string>
+              <string></string>
+            </entry>
+            <entry>
+              <string>RegularExpressions</string>
+              <list/>
+            </entry>
+            <entry>
+              <string>isGlobal</string>
+              <string>channel</string>
+            </entry>
+          </data>
+        </step>
+        <step>
+          <sequenceNumber>1</sequenceNumber>
+          <name>PatientID</name>
+          <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00100020&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;PatientID&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+          <type>Mapper</type>
+          <data>
+            <entry>
+              <string>Variable</string>
+              <string>PatientID</string>
+            </entry>
+            <entry>
+              <string>Mapping</string>
+              <string>msg[&quot;tag00100020&quot;].toString()</string>
+            </entry>
+            <entry>
+              <string>DefaultValue</string>
+              <string></string>
+            </entry>
+            <entry>
+              <string>RegularExpressions</string>
+              <list/>
+            </entry>
+            <entry>
+              <string>isGlobal</string>
+              <string>channel</string>
+            </entry>
+          </data>
+        </step>
+        <step>
+          <sequenceNumber>2</sequenceNumber>
+          <name>StartDate</name>
+          <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00321000&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;StartDate&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+          <type>Mapper</type>
+          <data>
+            <entry>
+              <string>Variable</string>
+              <string>StartDate</string>
+            </entry>
+            <entry>
+              <string>Mapping</string>
+              <string>msg[&quot;tag00321000&quot;].toString()</string>
+            </entry>
+            <entry>
+              <string>DefaultValue</string>
+              <string></string>
+            </entry>
+            <entry>
+              <string>RegularExpressions</string>
+              <list/>
+            </entry>
+            <entry>
+              <string>isGlobal</string>
+              <string>channel</string>
+            </entry>
+          </data>
+        </step>
+        <step>
+          <sequenceNumber>3</sequenceNumber>
+          <name>StartTime</name>
+          <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00321001&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;StartTime&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+          <type>Mapper</type>
+          <data>
+            <entry>
+              <string>Variable</string>
+              <string>StartTime</string>
+            </entry>
+            <entry>
+              <string>Mapping</string>
+              <string>msg[&quot;tag00321001&quot;].toString()</string>
+            </entry>
+            <entry>
+              <string>DefaultValue</string>
+              <string></string>
+            </entry>
+            <entry>
+              <string>RegularExpressions</string>
+              <list/>
+            </entry>
+            <entry>
+              <string>isGlobal</string>
+              <string>channel</string>
+            </entry>
+          </data>
+        </step>
+        <step>
+          <sequenceNumber>4</sequenceNumber>
+          <name>New Step</name>
+          <script>var uuid = UUIDGenerator.getUUID();
+
+var sDate = channelMap.get(&quot;StartDate&quot;);
+var pId = channelMap.get(&quot;PatientID&quot;);
+var sTime = channelMap.get(&quot;StartTime&quot;);
+
+globalMap.put(&quot;awsFID&quot;+pId+sDate, uuid);
+globalMap.put(&quot;OrigFName&quot;+pId+sDate, $(&apos;originalFilename&apos;));</script>
+          <type>JavaScript</type>
+          <data>
+            <entry>
+              <string>Script</string>
+              <string>var uuid = UUIDGenerator.getUUID();
+
+var sDate = channelMap.get(&quot;StartDate&quot;);
+var pId = channelMap.get(&quot;PatientID&quot;);
+var sTime = channelMap.get(&quot;StartTime&quot;);
+
+globalMap.put(&quot;awsFID&quot;+pId+sDate, uuid);
+globalMap.put(&quot;OrigFName&quot;+pId+sDate, $(&apos;originalFilename&apos;));</string>
+            </entry>
+          </data>
+        </step>
+      </steps>
+      <inboundTemplate encoding="base64"></inboundTemplate>
+      <outboundTemplate encoding="base64"></outboundTemplate>
+      <inboundDataType>RAW</inboundDataType>
+      <outboundDataType>DICOM</outboundDataType>
+      <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.4.2">
+        <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.4.2">
+          <splitType>JavaScript</splitType>
+          <batchScript></batchScript>
+        </batchProperties>
+      </inboundProperties>
+      <outboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+    </transformer>
+    <filter version="3.4.2">
+      <rules/>
+    </filter>
+    <transportName>Channel Reader</transportName>
+    <mode>SOURCE</mode>
+    <enabled>true</enabled>
+    <waitForPrevious>true</waitForPrevious>
+  </sourceConnector>
+  <destinationConnectors>
+    <connector version="3.4.2">
+      <metaDataId>1</metaDataId>
+      <name>Destination to FS RAW</name>
+      <properties class="com.mirth.connect.connectors.file.FileDispatcherProperties" version="3.4.2">
+        <pluginProperties/>
+        <destinationConnectorProperties version="3.4.2">
+          <queueEnabled>false</queueEnabled>
+          <sendFirst>false</sendFirst>
+          <retryIntervalMillis>10000</retryIntervalMillis>
+          <regenerateTemplate>false</regenerateTemplate>
+          <retryCount>0</retryCount>
+          <rotate>false</rotate>
+          <includeFilterTransformer>false</includeFilterTransformer>
+          <threadCount>1</threadCount>
+          <threadAssignmentVariable></threadAssignmentVariable>
+          <validateResponse>false</validateResponse>
+          <resourceIds class="linked-hash-map">
+            <entry>
+              <string>Default Resource</string>
+              <string>[Default Resource]</string>
+            </entry>
+            <entry>
+              <string>2f02969e-d5fa-4182-880a-19f316ba9faf</string>
+              <string>DICOM Resources</string>
+            </entry>
+          </resourceIds>
+          <queueBufferSize>1000</queueBufferSize>
+        </destinationConnectorProperties>
+        <scheme>FILE</scheme>
+        <host>/mirth/app/dicom/raw</host>
+        <outputPattern>raw-dicom-${message.messageId}.dcm</outputPattern>
+        <anonymous>true</anonymous>
+        <username>anonymous</username>
+        <password>anonymous</password>
+        <timeout>10000</timeout>
+        <secure>true</secure>
+        <passive>true</passive>
+        <validateConnection>true</validateConnection>
+        <outputAppend>false</outputAppend>
+        <errorOnExists>false</errorOnExists>
+        <temporary>false</temporary>
+        <binary>true</binary>
+        <charsetEncoding>DEFAULT_ENCODING</charsetEncoding>
+        <template>${message.rawData}</template>
+      </properties>
+      <transformer version="3.4.2">
+        <steps/>
+        <inboundDataType>DICOM</inboundDataType>
+        <outboundDataType>RAW</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.4.2">
+          <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.4.2">
+            <splitType>JavaScript</splitType>
+            <batchScript></batchScript>
+          </batchProperties>
+        </outboundProperties>
+      </transformer>
+      <responseTransformer version="3.4.2">
+        <steps/>
+        <inboundDataType>RAW</inboundDataType>
+        <outboundDataType>RAW</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.4.2">
+          <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.4.2">
+            <splitType>JavaScript</splitType>
+            <batchScript></batchScript>
+          </batchProperties>
+        </inboundProperties>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="3.4.2">
+          <batchProperties class="com.mirth.connect.plugins.datatypes.raw.RawBatchProperties" version="3.4.2">
+            <splitType>JavaScript</splitType>
+            <batchScript></batchScript>
+          </batchProperties>
+        </outboundProperties>
+      </responseTransformer>
+      <filter version="3.4.2">
+        <rules/>
+      </filter>
+      <transportName>File Writer</transportName>
+      <mode>DESTINATION</mode>
+      <enabled>true</enabled>
+      <waitForPrevious>true</waitForPrevious>
+    </connector>
+    <connector version="3.4.2">
+      <metaDataId>3</metaDataId>
+      <name>Destination to DDB</name>
+      <properties class="com.mirth.connect.connectors.js.JavaScriptDispatcherProperties" version="3.4.2">
+        <pluginProperties/>
+        <destinationConnectorProperties version="3.4.2">
+          <queueEnabled>false</queueEnabled>
+          <sendFirst>false</sendFirst>
+          <retryIntervalMillis>10000</retryIntervalMillis>
+          <regenerateTemplate>false</regenerateTemplate>
+          <retryCount>0</retryCount>
+          <rotate>false</rotate>
+          <includeFilterTransformer>false</includeFilterTransformer>
+          <threadCount>1</threadCount>
+          <threadAssignmentVariable></threadAssignmentVariable>
+          <validateResponse>false</validateResponse>
+          <resourceIds class="linked-hash-map">
+            <entry>
+              <string>Default Resource</string>
+              <string>[Default Resource]</string>
+            </entry>
+            <entry>
+              <string>2f02969e-d5fa-4182-880a-19f316ba9faf</string>
+              <string>DICOM Resources</string>
+            </entry>
+            <entry>
+              <string>796ea40c-02b0-4f6d-b1ef-d6f9fae09fc8</string>
+              <string>AWS Resources</string>
+            </entry>
+          </resourceIds>
+          <queueBufferSize>1000</queueBufferSize>
+        </destinationConnectorProperties>
+        <script>//Convert DICOM XML to JSON
+var dicomObj = new Packages.org.mirthblog.dicom.MDICOM();
+
+var fileDirectory = &quot;/mirth/app/dicom/raw/&quot;;
+var fileName = &quot;raw-dicom-&quot;+connectorMessage.getMessageId()+&quot;.dcm&quot;;
+
+logger.info(&quot;Processing JSON: &quot;+fileDirectory+fileName);
+
+var dicomJsonString = dicomObj.dicomFileProcess(fileName, fileDirectory);
+
+logger.info(dicomJsonString);
+
+var sDate = channelMap.get(&quot;StartDate&quot;);
+var pId = channelMap.get(&quot;PatientID&quot;);
+var sTime = channelMap.get(&quot;StartTime&quot;);
+
+var awsFileId = globalMap.get(&quot;awsFID&quot;+pId+sDate);
+var currentDate = DateUtil.getCurrentDate(&quot;MM-dd-yyyy-HH-mm&quot;);
+
+//loading DynamoDB java code
+var awsObj = new Packages.org.mirth.project.MCAWS();
+
+awsObj.dynamoInsertDicom(dicomJsonString,&quot;mirthdata&quot;,awsFileId,currentDate);</script>
+      </properties>
+      <transformer version="3.4.2">
+        <steps>
+          <step>
+            <sequenceNumber>0</sequenceNumber>
+            <name>PatientName</name>
+            <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00100010&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;PatientName&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+            <type>Mapper</type>
+            <data>
+              <entry>
+                <string>Variable</string>
+                <string>PatientName</string>
+              </entry>
+              <entry>
+                <string>Mapping</string>
+                <string>msg[&quot;tag00100010&quot;].toString()</string>
+              </entry>
+              <entry>
+                <string>DefaultValue</string>
+                <string></string>
+              </entry>
+              <entry>
+                <string>RegularExpressions</string>
+                <list/>
+              </entry>
+              <entry>
+                <string>isGlobal</string>
+                <string>channel</string>
+              </entry>
+            </data>
+          </step>
+          <step>
+            <sequenceNumber>1</sequenceNumber>
+            <name>PatientID</name>
+            <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00100020&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;PatientID&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+            <type>Mapper</type>
+            <data>
+              <entry>
+                <string>Variable</string>
+                <string>PatientID</string>
+              </entry>
+              <entry>
+                <string>Mapping</string>
+                <string>msg[&quot;tag00100020&quot;].toString()</string>
+              </entry>
+              <entry>
+                <string>DefaultValue</string>
+                <string></string>
+              </entry>
+              <entry>
+                <string>RegularExpressions</string>
+                <list/>
+              </entry>
+              <entry>
+                <string>isGlobal</string>
+                <string>channel</string>
+              </entry>
+            </data>
+          </step>
+          <step>
+            <sequenceNumber>2</sequenceNumber>
+            <name>StartDate</name>
+            <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00321000&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;StartDate&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+            <type>Mapper</type>
+            <data>
+              <entry>
+                <string>Variable</string>
+                <string>StartDate</string>
+              </entry>
+              <entry>
+                <string>Mapping</string>
+                <string>msg[&quot;tag00321000&quot;].toString()</string>
+              </entry>
+              <entry>
+                <string>DefaultValue</string>
+                <string></string>
+              </entry>
+              <entry>
+                <string>RegularExpressions</string>
+                <list/>
+              </entry>
+              <entry>
+                <string>isGlobal</string>
+                <string>channel</string>
+              </entry>
+            </data>
+          </step>
+          <step>
+            <sequenceNumber>3</sequenceNumber>
+            <name>StartTime</name>
+            <script>var mapping;
+
+try {
+	mapping = msg[&quot;tag00321001&quot;].toString(); 
+} catch (e) {
+	logger.error(e);
+	mapping = &apos;&apos;;
+}
+
+channelMap.put(&apos;StartTime&apos;, validate( mapping , &apos;&apos;, new Array()));</script>
+            <type>Mapper</type>
+            <data>
+              <entry>
+                <string>Variable</string>
+                <string>StartTime</string>
+              </entry>
+              <entry>
+                <string>Mapping</string>
+                <string>msg[&quot;tag00321001&quot;].toString()</string>
+              </entry>
+              <entry>
+                <string>DefaultValue</string>
+                <string></string>
+              </entry>
+              <entry>
+                <string>RegularExpressions</string>
+                <list/>
+              </entry>
+              <entry>
+                <string>isGlobal</string>
+                <string>channel</string>
+              </entry>
+            </data>
+          </step>
+          <step>
+            <sequenceNumber>4</sequenceNumber>
+            <name>New Step</name>
+            <script>var uuid = UUIDGenerator.getUUID();
+
+var sDate = channelMap.get(&quot;StartDate&quot;);
+var pId = channelMap.get(&quot;PatientID&quot;);
+var sTime = channelMap.get(&quot;StartTime&quot;);
+
+globalMap.put(&quot;awsFID&quot;+pId+sDate, uuid);
+globalMap.put(&quot;OrigFName&quot;+pId+sDate, $(&apos;originalFilename&apos;));</script>
+            <type>JavaScript</type>
+            <data>
+              <entry>
+                <string>Script</string>
+                <string>var uuid = UUIDGenerator.getUUID();
+
+var sDate = channelMap.get(&quot;StartDate&quot;);
+var pId = channelMap.get(&quot;PatientID&quot;);
+var sTime = channelMap.get(&quot;StartTime&quot;);
+
+globalMap.put(&quot;awsFID&quot;+pId+sDate, uuid);
+globalMap.put(&quot;OrigFName&quot;+pId+sDate, $(&apos;originalFilename&apos;));</string>
+              </entry>
+            </data>
+          </step>
+        </steps>
+        <inboundTemplate encoding="base64"></inboundTemplate>
+        <outboundTemplate encoding="base64"></outboundTemplate>
+        <inboundDataType>DICOM</inboundDataType>
+        <outboundDataType>DICOM</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+      </transformer>
+      <responseTransformer version="3.4.2">
+        <steps/>
+        <inboundDataType>DICOM</inboundDataType>
+        <outboundDataType>DICOM</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+      </responseTransformer>
+      <filter version="3.4.2">
+        <rules/>
+      </filter>
+      <transportName>JavaScript Writer</transportName>
+      <mode>DESTINATION</mode>
+      <enabled>true</enabled>
+      <waitForPrevious>true</waitForPrevious>
+    </connector>
+    <connector version="3.4.2">
+      <metaDataId>4</metaDataId>
+      <name>Destination to RDS</name>
+      <properties class="com.mirth.connect.connectors.jdbc.DatabaseDispatcherProperties" version="3.4.2">
+        <pluginProperties/>
+        <destinationConnectorProperties version="3.4.2">
+          <queueEnabled>false</queueEnabled>
+          <sendFirst>false</sendFirst>
+          <retryIntervalMillis>10000</retryIntervalMillis>
+          <regenerateTemplate>false</regenerateTemplate>
+          <retryCount>0</retryCount>
+          <rotate>false</rotate>
+          <includeFilterTransformer>false</includeFilterTransformer>
+          <threadCount>1</threadCount>
+          <threadAssignmentVariable></threadAssignmentVariable>
+          <validateResponse>false</validateResponse>
+          <resourceIds class="linked-hash-map">
+            <entry>
+              <string>Default Resource</string>
+              <string>[Default Resource]</string>
+            </entry>
+          </resourceIds>
+          <queueBufferSize>1000</queueBufferSize>
+        </destinationConnectorProperties>
+        <driver>com.mysql.jdbc.Driver</driver>
+        <url>jdbc:mysql://hostname:3306/database</url>
+        <username>username</username>
+        <password>password</password>
+        <query>var dbConn;
+
+try {
+	var mId = connectorMessage.getMessageId();
+	var OriginalFileName = &quot;raw-dicom-&quot;+mId+&quot;.dcm&quot;;
+	dbConn = DatabaseConnectionFactory.createDatabaseConnection(&apos;com.mysql.jdbc.Driver&apos;,&apos;jdbc:mysql://hostname:3306/database&apos;,&apos;username&apos;,&apos;password&apos;);
+
+	var sDate = channelMap.get(&quot;StartDate&quot;);
+	var pId = channelMap.get(&quot;PatientID&quot;);
+	var awsFileId = globalMap.get(&quot;awsFID&quot;+pId+sDate);
+	
+	var result = dbConn.executeUpdate(&quot;INSERT INTO AWS_FILE_MAP (date_submitted,file_type, file_name, aws_file_id) VALUES (NOW(),&apos;dicom&apos;, &apos;&quot;+OriginalFileName+&quot;&apos;, &apos;&quot;+awsFileId+&quot;&apos;)&quot;);
+
+} finally {
+	if (dbConn) { 
+		dbConn.close();
+	}
+}</query>
+        <useScript>true</useScript>
+      </properties>
+      <transformer version="3.4.2">
+        <steps/>
+        <inboundDataType>DICOM</inboundDataType>
+        <outboundDataType>DICOM</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+      </transformer>
+      <responseTransformer version="3.4.2">
+        <steps/>
+        <inboundDataType>DICOM</inboundDataType>
+        <outboundDataType>DICOM</outboundDataType>
+        <inboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+        <outboundProperties class="com.mirth.connect.plugins.datatypes.dicom.DICOMDataTypeProperties" version="3.4.2"/>
+      </responseTransformer>
+      <filter version="3.4.2">
+        <rules/>
+      </filter>
+      <transportName>Database Writer</transportName>
+      <mode>DESTINATION</mode>
+      <enabled>true</enabled>
+      <waitForPrevious>true</waitForPrevious>
+    </connector>
+  </destinationConnectors>
+  <preprocessingScript>// Modify the message variable below to pre process data
+return message;</preprocessingScript>
+  <postprocessingScript>// This script executes once after a message has been processed
+// Responses returned from here will be stored as &quot;Postprocessor&quot; in the response map
+return;</postprocessingScript>
+  <deployScript>// This script executes once when the channel is deployed
+// You only have access to the globalMap and globalChannelMap here to persist data
+return;</deployScript>
+  <undeployScript>// This script executes once when the channel is undeployed
+// You only have access to the globalMap and globalChannelMap here to persist data
+return;</undeployScript>
+  <properties version="3.4.2">
+    <clearGlobalChannelMap>true</clearGlobalChannelMap>
+    <messageStorageMode>DEVELOPMENT</messageStorageMode>
+    <encryptData>false</encryptData>
+    <removeContentOnCompletion>false</removeContentOnCompletion>
+    <removeOnlyFilteredOnCompletion>false</removeOnlyFilteredOnCompletion>
+    <removeAttachmentsOnCompletion>false</removeAttachmentsOnCompletion>
+    <initialState>STARTED</initialState>
+    <storeAttachments>false</storeAttachments>
+    <tags class="linked-hash-set"/>
+    <metaDataColumns>
+      <metaDataColumn>
+        <name>SOURCE</name>
+        <type>STRING</type>
+        <mappingName>mirth_source</mappingName>
+      </metaDataColumn>
+      <metaDataColumn>
+        <name>TYPE</name>
+        <type>STRING</type>
+        <mappingName>mirth_type</mappingName>
+      </metaDataColumn>
+    </metaDataColumns>
+    <attachmentProperties version="3.4.2">
+      <type>None</type>
+      <properties/>
+    </attachmentProperties>
+    <archiveEnabled>true</archiveEnabled>
+    <resourceIds class="linked-hash-map">
+      <entry>
+        <string>Default Resource</string>
+        <string>[Default Resource]</string>
+      </entry>
+      <entry>
+        <string>2f02969e-d5fa-4182-880a-19f316ba9faf</string>
+        <string>DICOM Resources</string>
+      </entry>
+    </resourceIds>
+  </properties>
+  <codeTemplateLibraries/>
+</channel>
