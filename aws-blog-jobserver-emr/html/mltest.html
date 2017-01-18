@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+
+            background-image: url("https://www.offerpop.com/wp-content/uploads/2014/08/Movies.jpg");
+			background-size:cover;
+            background-repeat:no-repeat;
+        }
+
+        #id01{
+            float:left;
+            padding:5px;
+            width:60%;
+            margin:1em;
+        }
+
+        #id03{
+            font-size:1.2em;
+            padding-top:10px;
+
+        }
+        #id05{
+            float:left;
+            padding:5px;
+            width:60%;
+            margin:1em;
+        }
+
+        #id07{
+            font-size:1.2em;
+            padding-top:10px;
+
+        }
+        #id10{
+            float:left;
+            padding:5px;
+            width:60%;
+            margin:1em;
+        }
+        table, th, td {
+            border: none;
+        }
+
+        button, select {
+            color: #fff;
+            background-color: #4B5F94;
+            border-color: #2e6da4;
+        }
+
+        table, tr {
+            padding-top: 3px;
+        }
+
+        select {
+            font-size: 14px;
+        }
+
+        input[type=radio] {
+            margin-left:0px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.2/p5.js"></script>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+</head>
+
+<body onload="refresh()">
+<div>
+    <img src="https://s3-us-west-2.amazonaws.com/predictreadmission/AmazonWebservices_Logo.svg" style="display: inline-block; padding-left: 1em;"/>
+    <label style="font-weight: bold; font-size: 30px; text-align: center; display: inherit;">ACME Movies Recommendations Tool
+    </label>
+</div>
+<div id="id01">
+    <table style="padding: 20px 30px;">
+        <tr>
+            <td><em>Select Genre for your Recommendations  </em></td>
+            <td>
+                <Select id="Genre">
+                    <option value="Comedy">Comedy</option>
+                    <option value="Drama">Drama</option>
+                    <option value="Horror">Horror</option>
+                    <option value="Action">Action</option>
+                    <option value="Sci-Fi">Sci-Fi</option>
+                    <option value="Animation">Animation</option>
+                </Select>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button type="button" onclick="callGenre();" style="Font-size:16px;font-weight:bold;margin:10px 0px;">Get Recommendations based on Genre</button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="id02">
+                    <div id="id04" style="font-size:1.2em;display:none;">Movies for you: </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="id03" style="display:none;"></div>
+            </td>
+        </tr>
+
+    </table>
+</div>
+<div id="id05">
+    <table style="padding: 20px 10px;">
+        <tr>
+            <td>
+                <button type="button" onclick="callRecomendations();" style="Font-size:16px;font-weight:bold;margin:10px 0px;">Get ALL Recommendations</button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="id06">
+                    <div id="id08" style="font-size:1.2em;display:none;">Recommendations for you: </div>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="id07" style="display:none;"></div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div id="id10">
+    <table style="padding: 20px 10px;" >
+            <tr>
+                <td> Data Path on S3:  </td>
+                <td>&nbsp; &nbsp; &nbsp; </td>
+                <td>s3://<input type="text" id="s3DataSrc" size="70" value="dgraeberaws-blogs/ml/data/movielens/small/"></td>
+            <tr>
+            <tr>
+                <td> Model Path on S3:  </td>
+                <td>&nbsp; &nbsp; &nbsp; </td>
+                <td>s3://<input type="text" id="s3ModelSrc" size="70" value="dgraeberaws-blogs/ml/models/movielens/recommendations/"></td>
+
+            <tr>
+                <td>
+                    <button type="button" onclick="callLoad();" style="Font-size:16px;font-weight:bold;margin:10px 0px;">Reload Model</button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div id="id12" style="display:none;"></div>
+                </td>
+            </tr>
+    </table>
+
+</div>
+
+</body>
+
+
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.3.3.min.js"></script>
+<script>
+    function setup() {
+        //createCanvas(400, 400);
+    }
+
+
+    /*  Update your Cognito Pool ID here */
+    AWS.config.region = 'us-east-1'; // Region
+    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+        IdentityPoolId: 'us-east-1:<your identity pool id>'}
+    );
+
+    /* ADD the ARN values of the 3 Lambda here */
+    var loadHandlerFunction = 'arn:aws:lambda:us-east-1:<your account id>:function:loadHandlerML-Blog';
+    var genreHandlerFunction = 'arn:aws:lambda:us-east-1:<your account id>:function:genreHandlerML-Blog';
+    var recommenderHandlerFunction =
+            'arn:aws:lambda:us-east-1:<your account id>:function:recommenderHandlerML-Blog';
+
+    var lambda = new AWS.Lambda({apiVersion: '2015-03-31'});
+
+    function callGenre(){
+        var e = document.getElementById("Genre");
+        var genre = e.options[e.selectedIndex].value;
+        var genreObject = {"userId" : 100, "genre":genre};
+        console.log(genreObject);
+        console.log(e)
+        var params = {
+            FunctionName: genreHandlerFunction,
+            InvocationType: 'RequestResponse',
+            LogType: 'Tail',
+            Payload: JSON.stringify(genreObject)
+        };
+        console.log('invocation');
+
+        lambda.invoke(params, function(err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else {
+                console.log(data);           // successful response
+                formatGenre(JSON.parse(data.Payload).result);
+            }
+        });
+
+    }
+
+    function callRecomendations(){
+        var recObject = {"userId" : 100};
+        console.log(recObject);
+        var params = {
+            FunctionName: recommenderHandlerFunction,
+            InvocationType: 'RequestResponse',
+            LogType: 'Tail',
+            Payload: JSON.stringify(recObject)
+        };
+        console.log('invocation');
+
+        lambda.invoke(params, function(err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else {
+                console.log(data);           // successful response
+                formatRecommendation(JSON.parse(data.Payload).result);
+            }
+        });
+
+    }
+
+
+    function callLoad(){
+        var srcDataLoc = document.getElementById("s3DataSrc").value;
+        var srcModelLoc = document.getElementById("s3ModelSrc").value;
+        var reloadObject = {"s3DataLoc" : srcDataLoc, "s3ModelLoc":srcModelLoc};
+
+        console.log(reloadObject)
+        var params = {
+            FunctionName: loadHandlerFunction,
+            InvocationType: 'RequestResponse',
+            LogType: 'Tail',
+            Payload: JSON.stringify(reloadObject)
+        };
+        console.log('invocation');
+
+        lambda.invoke(params, function(err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else {
+                console.log(data);           // successful response
+                formatReload(JSON.parse(data.Payload).result);
+            }
+        });
+
+    }
+
+    function formatGenre(list){
+        var results = "";
+        list.forEach(function(entry) {
+            results += entry + "<br>";
+        });
+
+        document.getElementById("id04").style.display = "";
+        document.getElementById("id03").style.display = "";
+        document.getElementById("id03").innerHTML = results;
+    }
+
+    function formatRecommendation(list){
+        var results = "";
+        list.forEach(function(entry) {
+            results += entry + "<br>";
+        });
+
+        document.getElementById("id08").style.display = "";
+        document.getElementById("id07").style.display = "";
+        document.getElementById("id07").innerHTML = results;
+    }
+
+    function formatReload(res){
+        var results = res;
+        document.getElementById("id12").innerHTML = results;
+    }
+    function refresh(){
+        // Do nothing now
+    }
+</script>
+</html>
