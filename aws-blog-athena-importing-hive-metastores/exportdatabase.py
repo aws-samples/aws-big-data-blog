@@ -19,7 +19,7 @@ print "\nFound "+str(len(tables))+" tables in database..."
 
 with open(schema+'_tables.hql',mode='w+') as output:
    for i in tables:
-      output.write('!echo DROP TABLE `'+i[:-1]+'`\;;\n')
+      output.write('!echo DROP TABLE IF EXISTS `'+i[:-1]+'`\;;\n')
       output.write('show create table '+i[:-1]+';\n')
       output.write(separator+'\n')
 
