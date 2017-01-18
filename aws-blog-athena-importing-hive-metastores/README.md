@@ -57,7 +57,7 @@ $ groovy executescript.gvy playdb default_export.hql
 
 Found 2 statements in script...
 
-1. Executing :DROP TABLE `nyc_trips_pq`
+1. Executing :DROP TABLE IF EXISTS `nyc_trips_pq`
 
 result : OK
 
