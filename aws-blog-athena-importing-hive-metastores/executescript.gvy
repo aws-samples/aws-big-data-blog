@@ -7,9 +7,13 @@ def dbUrl = 'jdbc:awsathena://athena.us-east-1.amazonaws.com:443/awsdatacatalog/
 java.util.Properties props = new Properties();
 
 //script parameters *** Modify as needed ***
-props.put("s3_staging_dir", "s3://<<bucket>>/<<prefix>>/");
-props.put("user", "<<access key id>>");
-props.put("password", "<<secret access key>>");
+def s3_staging_dir = "s3_staging_dir";
+def user = "user";
+def password = "password";
+
+props.put(s3_staging_dir, "s3://<<bucket>>/<<prefix>>/");
+props.put(user, "<<access key id>>");
+props.put(password, "<<secret access key>>");
 //end of script parameters
 
 if (args.size() < 2) {
