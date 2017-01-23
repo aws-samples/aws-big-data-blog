@@ -1,0 +1,182 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Generate KMS keys for EMR CSE & LUKS Encryption",
+    "Outputs": {
+        "EMRKey": {
+            "Description": "KMS Key for EMR CSE",
+            "Value": {
+                "Fn::GetAtt": [
+                    "KMSEMRKey",
+                    "Arn"
+                ]
+            }
+        },
+        "LUKSKey": {
+            "Description": "KMS Key for LUKS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "KMSLUKSKey",
+                    "Arn"
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "KMSEMRAlias": {
+            "Default": "alias/EMR-Encryption-Key",
+            "Description": "KMS alias to be used for EMR CSE",
+            "Type": "String"
+        },
+        "KMSLUKSAlias": {
+            "Default": "alias/LUKS-Encryption-Key",
+            "Description": "KMS alias to be used for LUKS Encryption",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "EMRAlias": {
+            "Properties": {
+                "AliasName": {
+                    "Ref": "KMSEMRAlias"
+                },
+                "TargetKeyId": {
+                    "Ref": "KMSEMRKey"
+                }
+            },
+            "Type": "AWS::KMS::Alias"
+        },
+        "KMSEMRKey": {
+            "Properties": {
+                "Description": "Master Key that will be used for EMR Encryption",
+                "Enabled": "true",
+                "KeyPolicy": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "kms:*"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":root"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":role/EMR_EC2_DefaultRole"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":role/EMR_DefaultRole"
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            },
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            },
+            "Type": "AWS::KMS::Key"
+        },
+        "KMSLUKSKey": {
+            "Properties": {
+                "Description": "Master Key that will be used for LUKS Encryption",
+                "Enabled": "true",
+                "KeyPolicy": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "kms:*"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":root"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":role/EMR_EC2_DefaultRole"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":role/EMR_DefaultRole"
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            },
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            },
+            "Type": "AWS::KMS::Key"
+        },
+        "LUKSAlias": {
+            "Properties": {
+                "AliasName": {
+                    "Ref": "KMSLUKSAlias"
+                },
+                "TargetKeyId": {
+                    "Ref": "KMSLUKSKey"
+                }
+            },
+            "Type": "AWS::KMS::Alias"
+        }
+    }
+}
