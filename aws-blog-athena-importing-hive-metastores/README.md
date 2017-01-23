@@ -49,7 +49,8 @@ Please note that Amazon Athena does not support every datatype and every serde s
  
 #### 2. Importing the external tables into Athena
 
-The groovy script 'executescript.py' connects to Athena and executes the Hive script generated above. Please ensure you update the access key id, secret access key and specify a S3 bucket as 's3_staging_dir' in the script.
+The groovy script 'executescript.py' connects to Athena and executes the Hive script generated above. Please ensure you update the access key id, secret access key and specify a S3 bucket as 's3_staging_dir' in the script. Please also ensure that the target database in the command exists in Amazon Athena.
+
 ```
 EMR $> groovy executescript.gvy <<target database in Athena>> <<Hive script file>>
 ```
