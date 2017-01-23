@@ -17,7 +17,7 @@ The above steps on AWS EMR would be:
 
 ```
 # set Java to 1.8
-EMR $> export JAVA_HOME=/usr/lib/jvm/java-1.8.0;.
+EMR $> export JAVA_HOME=/usr/lib/jvm/java-1.8.0
 
 # Download Groovy and set Groovy binary in PATH
 EMR $> wget https://dl.bintray.com/groovy/maven/apache-groovy-binary-2.4.7.zip

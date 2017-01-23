@@ -5,22 +5,21 @@ schema=sys.argv[1]
 command="hive --database "+schema+" -e 'show tables' -S"
 tables=[]
 separator='!echo \;;'
+filename='_tables.hql'
 
 os.system("rm "+schema+"*.hql 2> /dev/null")
 os.system("rm "+schema+"output 2> /dev/null")
 
 p = os.popen(command,"r")
-while 1:
-    line = p.readline()
-    if not line: break
+while line = p.readline():
     tables.append(line)
 
 print "\nFound "+str(len(tables))+" tables in database..."
 
-with open(schema+'_tables.hql',mode='w+') as output:
-   for i in tables:
-      output.write('!echo DROP TABLE IF EXISTS `'+i[:-1]+'`\;;\n')
-      output.write('show create table '+i[:-1]+';\n')
+with open(schema+filename,mode='w+') as output:
+   for t in tables:
+      output.write('!echo DROP TABLE IF EXISTS `'+t[:-1]+'`\;;\n')
+      output.write('show create table '+t[:-1]+';\n')
       output.write(separator+'\n')
 
 command="hive -f "+schema+"_tables.hql -S >> "+schema+".output"

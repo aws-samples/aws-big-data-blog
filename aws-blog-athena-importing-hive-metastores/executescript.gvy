@@ -1,16 +1,18 @@
 import groovy.sql.Sql
 
 def dbDriver = 'com.amazonaws.athena.jdbc.AthenaDriver'
+//change jdbc endpoint below if pointing to any other region
 def dbUrl = 'jdbc:awsathena://athena.us-east-1.amazonaws.com:443/awsdatacatalog/'
 
 java.util.Properties props = new Properties();
 
 //script parameters *** Modify as needed ***
-props.put("s3_staging_dir", "s3://ws-athena-query-results-<<account number>>/staging/");
+props.put("s3_staging_dir", "s3://<<bucket>>/<<prefix>>/");
 props.put("user", "<<access key id>>");
 props.put("password", "<<secret access key>>");
+//end of script parameters
 
-if (args.size() < 2){
+if (args.size() < 2) {
   println "\nUsage: groovy executescript.py <<hive script file>> <<target database>>"
   System.exit(0)
 }
@@ -22,11 +24,11 @@ if( !targetfile.exists() ) {
 dataList = targetfile.text.split( ';' )
 print "\nFound "+(dataList.size()-1)+" statements in script...\n"
 sql=Sql.newInstance( dbUrl+args[0], props, dbDriver)
-dataList.eachWithIndex {elem, i ->
-   if (elem.trim()!=";" && elem.trim().size()>0){
+dataList.eachWithIndex { elem, i ->
+   if (elem.trim()!=";" && elem.trim().size()>0) {
       println "\n"+(i+1)+". Executing :"+elem
 
-      try{
+      try {
          //execute sql statement
          row = sql.firstRow(elem)
          if (row==null) {
