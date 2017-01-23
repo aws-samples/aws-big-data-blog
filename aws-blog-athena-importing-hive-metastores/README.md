@@ -45,7 +45,7 @@ Found 10 tables in database...
 
 Database metadata exported to default_export.hql.
 ```
-Please note that Amazon Athena does not support every datatype supported by Hive. Please refer to the Amazon Athena documentation on supported datatypes and edit the generated Hive script as needed.
+Please note that Amazon Athena does not support every datatype and every serde supported by Hive. Please refer to the Amazon Athena documentation on supported datatypes and serdes and edit or replace contents in the generated Hive script as needed to ensure compatibility with Amazon Athena.
  
 #### 2. Importing the external tables into Athena
 
