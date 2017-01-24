@@ -42,7 +42,7 @@ dataList.eachWithIndex { elem, i ->
          }
       }
       catch(Exception ex) {
-         println("Caught exception: "+ex);
+         ex.printStackTrace();
       }
    }
 }
