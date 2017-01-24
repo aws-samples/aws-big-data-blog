@@ -12,7 +12,7 @@ os.system("rm "+schema+"output 2> /dev/null")
 
 p = os.popen(command,"r")
 for line in p:
-    tables.append(line)
+   tables.append(line)
 
 print "\nFound "+str(len(tables))+" tables in database..."
 
