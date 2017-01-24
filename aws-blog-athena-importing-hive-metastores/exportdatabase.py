@@ -11,7 +11,7 @@ os.system("rm "+schema+"*.hql 2> /dev/null")
 os.system("rm "+schema+"output 2> /dev/null")
 
 p = os.popen(command,"r")
-while line = p.readline():
+for line in p:
     tables.append(line)
 
 print "\nFound "+str(len(tables))+" tables in database..."
