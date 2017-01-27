@@ -188,9 +188,40 @@ public class MCAWS
         try {
         JSONObject obj = new JSONObject(dicomJson);
 
-        //firstName = obj.getJSONObject("data").getJSONObject("demographics").getJSONObject("name").getString("first");
-        lastName = obj.getJSONObject("00100010").getJSONObject("Value").getString("Alphabetic");
-        dob = obj.getJSONObject("00100030").getJSONObject("Value").getString("Alphabetic");
+	//DICOM stores patient name in tag 00100010
+        if(obj.has("00100010")) {
+                if(obj.getJSONObject("00100010").has("Value")) {
+                        JSONArray lastNameArray = obj.getJSONObject("00100010").getJSONArray("Value");
+                        if(lastNameArray !=null) {
+                                JSONObject lastNameObj = lastNameArray.getJSONObject(0);
+                                if(lastNameObj.has("Alphabetic")) {
+                                        String patientName = lastNameObj.getString("Alphabetic");
+                                        String[] patientNameArray = patientName.split("\\^");
+
+					//some sample DICOM files only have one name string rather than 
+					//delimited strings like in production messages.
+					//in that case, we use that string as the last name
+					//the else statement covers when we have a first and last name
+                                        if(patientNameArray.length == 1) {
+                                                lastName = lastNameObj.getString("Alphabetic");
+                                        } else if(patientNameArray.length > 1) {
+                                                lastName = patientNameArray[0];
+                                                firstName = patientNameArray[1];
+                                                }
+                                        }
+                                }
+                        }
+                }
+
+	//DICOM stores Date of Birth in tag 00100030
+        if(obj.has("00100030")) {
+                if(obj.getJSONObject("00100030").has("Value")) {
+                        JSONArray dobArray = obj.getJSONObject("00100030").getJSONArray("Value");
+                        if(dobArray !=null) {
+				dob = dobArray.getString(0);
+                                }
+                        }
+                }
 
         } catch (org.json.JSONException e) { System.out.println("JSON ERROR"); }
 
