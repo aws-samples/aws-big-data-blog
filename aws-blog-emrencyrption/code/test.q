@@ -1,47 +1,27 @@
-DROP TABLE IF EXISTS cf_logs;
+DROP TABLE IF EXISTS cars;
 
-CREATE EXTERNAL TABLE IF NOT EXISTS cf_logs (
-  date date,
-  time string,
-  location string,
-  bytes bigint,
-  requestip string,
-  method string,
-  host string,
-  uri string,
-  status bigint,
-  referrer string,
-  useragent string,
-  uriquery string,
-  cookie string,
-  resulttype string,
-  requestid string,
-  header string,
-  csprotocol string,
-  csbytes string,
-  timetaken bigint,
-  forwardedfor string,
-  sslprotocol string,
-  sslcipher string,
-  responseresulttype string
+CREATE EXTERNAL TABLE IF NOT EXISTS cars (
+  year string,
+  make string,
+  model string,
+  comment string,
+  blank string
 )
 ROW FORMAT DELIMITED
-FIELDS TERMINATED BY '\t'
-LOCATION 's3://aws-sai-sriparasa/datalake/cf-logs/'
+FIELDS TERMINATED BY ','
+LOCATION 's3://aws-bigdata-blog/artifacts/emr-encryption/data/cars/'
 TBLPROPERTIES("skip.header.line.count"="1");
 
-SELECT date,location from cf_logs limit 10;
+SELECT make, model FROM cars;
 
-
-CREATE EXTERNAL TABLE IF NOT EXISTS cf_logs_location_10 (
-    date date,
-    location string
+CREATE EXTERNAL TABLE IF NOT EXISTS cars_encrypted (
+    make string,
+    model string
 )
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '\t'
 STORED AS TEXTFILE
-LOCATION 's3://your-bucket/output/encrypted/cf-logs_location_kms/';
+LOCATION 's3://${hiveconf:bucketName}/output/encrypted/cars/';
 
-
-INSERT OVERWRITE TABLE cf_logs_location_10
-select date, location from cf_logs limit 10;
+INSERT OVERWRITE TABLE cars_encrypted
+select make, model from cars;
