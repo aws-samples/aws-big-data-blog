@@ -1,9 +1,9 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Generate KMS keys for EMR CSE & LUKS Encryption",
+    "Description": "Generate KMS keys for EMRFS & LUKS Encryption",
     "Outputs": {
         "EMRKey": {
-            "Description": "KMS Key for EMR CSE",
+            "Description": "KMS Key for EMRFS",
             "Value": {
                 "Fn::GetAtt": [
                     "KMSEMRKey",
@@ -23,8 +23,8 @@
     },
     "Parameters": {
         "KMSEMRAlias": {
-            "Default": "alias/EMR-Encryption-Key",
-            "Description": "KMS alias to be used for EMR CSE",
+            "Default": "alias/EMRFS-Encryption-Key",
+            "Description": "KMS alias to be used for EMRFS",
             "Type": "String"
         },
         "KMSLUKSAlias": {
@@ -53,23 +53,15 @@
                     "Statement": [
                         {
                             "Action": [
-                                "kms:*"
+                                "kms:Encrypt",
+                                "kms:Decrypt",
+                                "kms:ReEncrypt",
+                                "kms:GenerateDataKey",
+                                "kms:DescribeKey"
                             ],
                             "Effect": "Allow",
                             "Principal": {
                                 "AWS": [
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":root"
-                                            ]
-                                        ]
-                                    },
                                     {
                                         "Fn::Join": [
                                             "",
@@ -98,7 +90,44 @@
                             },
                             "Resource": [
                                 "*"
-                            ]
+                            ],
+                            "Sid": "Stmt1"
+                        },
+                        {
+                            "Action": [
+                                "kms:Put*",
+                                "kms:ScheduleKeyDeletion",
+                                "kms:CancelKeyDeletion",
+                                "kms:Describe*",
+                                "kms:Revoke*",
+                                "kms:Disable*",
+                                "kms:Enable*",
+                                "kms:Delete*",
+                                "kms:List*",
+                                "kms:Update*",
+                                "kms:Create*"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":root"
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            },
+                            "Resource": [
+                                "*"
+                            ],
+                            "Sid": "Stmt2"
                         }
                     ],
                     "Version": "2012-10-17"
@@ -114,23 +143,15 @@
                     "Statement": [
                         {
                             "Action": [
-                                "kms:*"
+                                "kms:Encrypt",
+                                "kms:Decrypt",
+                                "kms:ReEncrypt",
+                                "kms:GenerateDataKey",
+                                "kms:DescribeKey"
                             ],
                             "Effect": "Allow",
                             "Principal": {
                                 "AWS": [
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":root"
-                                            ]
-                                        ]
-                                    },
                                     {
                                         "Fn::Join": [
                                             "",
@@ -159,7 +180,44 @@
                             },
                             "Resource": [
                                 "*"
-                            ]
+                            ],
+                            "Sid": "Stmt3"
+                        },
+                        {
+                            "Action": [
+                                "kms:Put*",
+                                "kms:ScheduleKeyDeletion",
+                                "kms:CancelKeyDeletion",
+                                "kms:Describe*",
+                                "kms:Revoke*",
+                                "kms:Disable*",
+                                "kms:Enable*",
+                                "kms:Delete*",
+                                "kms:List*",
+                                "kms:Update*",
+                                "kms:Create*"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:iam::",
+                                                {
+                                                    "Ref": "AWS::AccountId"
+                                                },
+                                                ":root"
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            },
+                            "Resource": [
+                                "*"
+                            ],
+                            "Sid": "Stmt4"
                         }
                     ],
                     "Version": "2012-10-17"
