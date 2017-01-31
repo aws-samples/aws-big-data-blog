@@ -6,7 +6,7 @@
             "Description": "KMS Key for EMRFS",
             "Value": {
                 "Fn::GetAtt": [
-                    "KMSEMRKey",
+                    "KMSEMRFSKey",
                     "Arn"
                 ]
             }
@@ -40,12 +40,12 @@
                     "Ref": "KMSEMRAlias"
                 },
                 "TargetKeyId": {
-                    "Ref": "KMSEMRKey"
+                    "Ref": "KMSEMRFSKey"
                 }
             },
             "Type": "AWS::KMS::Alias"
         },
-        "KMSEMRKey": {
+        "KMSEMRFSKey": {
             "Properties": {
                 "Description": "Master Key that will be used for EMR Encryption",
                 "Enabled": "true",
@@ -55,9 +55,7 @@
                             "Action": [
                                 "kms:Encrypt",
                                 "kms:Decrypt",
-                                "kms:ReEncrypt",
-                                "kms:GenerateDataKey",
-                                "kms:DescribeKey"
+                                "kms:GenerateDataKey"
                             ],
                             "Effect": "Allow",
                             "Principal": {
@@ -71,18 +69,6 @@
                                                     "Ref": "AWS::AccountId"
                                                 },
                                                 ":role/EMR_EC2_DefaultRole"
-                                            ]
-                                        ]
-                                    },
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":role/EMR_DefaultRole"
                                             ]
                                         ]
                                     }
@@ -145,9 +131,7 @@
                             "Action": [
                                 "kms:Encrypt",
                                 "kms:Decrypt",
-                                "kms:ReEncrypt",
-                                "kms:GenerateDataKey",
-                                "kms:DescribeKey"
+                                "kms:GenerateDataKey"
                             ],
                             "Effect": "Allow",
                             "Principal": {
@@ -161,18 +145,6 @@
                                                     "Ref": "AWS::AccountId"
                                                 },
                                                 ":role/EMR_EC2_DefaultRole"
-                                            ]
-                                        ]
-                                    },
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":role/EMR_DefaultRole"
                                             ]
                                         ]
                                     }
