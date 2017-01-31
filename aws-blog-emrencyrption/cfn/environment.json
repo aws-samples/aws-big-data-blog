@@ -1,0 +1,748 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template to build a private & public subnet with a Managed NAT Gateway and S3 VPC Endpoint for EMR",
+    "Mappings": {
+        "AWSInstanceType2Arch": {
+            "c1.medium": {
+                "Arch": "PV64"
+            },
+            "c1.xlarge": {
+                "Arch": "PV64"
+            },
+            "c3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.large": {
+                "Arch": "HVM64"
+            },
+            "c3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "cc2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "cr1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "g2.2xlarge": {
+                "Arch": "HVMG2"
+            },
+            "hi1.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "hs1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.xlarge": {
+                "Arch": "HVM64"
+            },
+            "m1.large": {
+                "Arch": "PV64"
+            },
+            "m1.medium": {
+                "Arch": "PV64"
+            },
+            "m1.small": {
+                "Arch": "PV64"
+            },
+            "m1.xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.2xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.4xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.xlarge": {
+                "Arch": "PV64"
+            },
+            "m3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "m3.large": {
+                "Arch": "HVM64"
+            },
+            "m3.medium": {
+                "Arch": "HVM64"
+            },
+            "m3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.10xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.large": {
+                "Arch": "HVM64"
+            },
+            "m4.xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.large": {
+                "Arch": "HVM64"
+            },
+            "r3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "t1.micro": {
+                "Arch": "PV64"
+            },
+            "t2.medium": {
+                "Arch": "HVM64"
+            },
+            "t2.micro": {
+                "Arch": "HVM64"
+            },
+            "t2.small": {
+                "Arch": "HVM64"
+            }
+        },
+        "AWSRegionArch2AMI": {
+            "ap-northeast-1": {
+                "HVM64": "ami-35072834",
+                "HVMG2": "ami-5dd1ff5c",
+                "PV64": "ami-21072820"
+            },
+            "ap-southeast-1": {
+                "HVM64": "ami-d6e1c584",
+                "HVMG2": "ami-fabe9aa8",
+                "PV64": "ami-20e1c572"
+            },
+            "ap-southeast-2": {
+                "HVM64": "ami-fd4724c7",
+                "HVMG2": "ami-e98ae9d3",
+                "PV64": "ami-8b4724b1"
+            },
+            "cn-north-1": {
+                "HVM64": "ami-ac57c595",
+                "HVMG2": "NOT_SUPPORTED",
+                "PV64": "ami-a857c591"
+            },
+            "eu-central-1": {
+                "HVM64": "ami-b43503a9",
+                "HVMG2": "ami-b03503ad",
+                "PV64": "ami-a03503bd"
+            },
+            "eu-west-1": {
+                "HVM64": "ami-748e2903",
+                "HVMG2": "ami-00913777",
+                "PV64": "ami-aa8f28dd"
+            },
+            "sa-east-1": {
+                "HVM64": "ami-956cc688",
+                "HVMG2": "NOT_SUPPORTED",
+                "PV64": "ami-9d6cc680"
+            },
+            "us-east-1": {
+                "HVM64": "ami-08842d60",
+                "HVMG2": "ami-3a329952",
+                "PV64": "ami-50842d38"
+            },
+            "us-west-1": {
+                "HVM64": "ami-cfa8a18a",
+                "HVMG2": "ami-331b1376",
+                "PV64": "ami-c7a8a182"
+            },
+            "us-west-2": {
+                "HVM64": "ami-8786c6b7",
+                "HVMG2": "ami-47296a77",
+                "PV64": "ami-af86c69f"
+            }
+        }
+    },
+    "Outputs": {
+        "BastionInstance": {
+            "Description": "Bastion Instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "BastionInstance",
+                    "PublicDnsName"
+                ]
+            }
+        },
+        "NatEip": {
+            "Value": {
+                "Ref": "EipNat"
+            }
+        },
+        "PrivateSubnet": {
+            "Value": {
+                "Ref": "PrivateSubnet"
+            }
+        },
+        "PublicSubnet": {
+            "Value": {
+                "Ref": "PublicSubnet"
+            }
+        },
+        "S3VPCEndpoint": {
+            "Value": {
+                "Ref": "VPCEndpoint"
+            }
+        },
+        "VPC": {
+            "Value": {
+                "Ref": "VPC"
+            }
+        }
+    },
+    "Parameters": {
+        "InstanceType": {
+            "AllowedValues": [
+                "t1.micro",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "m1.small",
+                "m1.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlargec1.medium",
+                "c1.xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "g2.2xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "hi1.4xlarge",
+                "hs1.8xlarge",
+                "cr1.8xlarge",
+                "cc2.8xlarge",
+                "cg1.4xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type.",
+            "Default": "m4.large",
+            "Description": "EC2 instance type",
+            "Type": "String"
+        },
+        "KeyName": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        }
+    },
+    "Resources": {
+        "AttachGateway": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "BastionInstance": {
+            "Properties": {
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch",
+                                {
+                                    "Ref": "InstanceType"
+                                },
+                                "Arch"
+                            ]
+                        }
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeleteOnTermination": "true",
+                        "DeviceIndex": "0",
+                        "GroupSet": [
+                            {
+                                "Ref": "BastionSG"
+                            }
+                        ],
+                        "SubnetId": {
+                            "Ref": "PublicSubnet"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "BastionInstance"
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::Instance"
+        },
+        "BastionSG": {
+            "Properties": {
+                "GroupDescription": "BastionSG",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "22",
+                        "IpProtocol": "tcp",
+                        "ToPort": "22"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "BastionSG"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "EipNat": {
+            "Properties": {
+                "Domain": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::EIP"
+        },
+        "InboundHTTPNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "false",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "80",
+                    "To": "80"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "100"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "InboundHTTPsNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "false",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "443",
+                    "To": "443"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "101"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "InboundResponsePortsNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "false",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "1024",
+                    "To": "65535"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "103"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "InboundSSHNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "false",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "22",
+                    "To": "22"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "102"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "InternetGateway": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "MNATG": {
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "EipNat",
+                        "AllocationId"
+                    ]
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnet"
+                }
+            },
+            "Type": "AWS::EC2::NatGateway"
+        },
+        "NatRoute": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "MNATG"
+                },
+                "RouteTableId": {
+                    "Ref": "PvtRouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "NetworkAcl": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::NetworkAcl"
+        },
+        "OutBoundHTTPNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "true",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "80",
+                    "To": "80"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "100"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "OutBoundHTTPsNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "true",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "443",
+                    "To": "443"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "101"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "OutBoundResponsePortsNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "true",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "1024",
+                    "To": "65535"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "102"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        },
+        "PrivateSubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        "0",
+                        {
+                            "Fn::GetAZs": {
+                                "Ref": "AWS::Region"
+                            }
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.2.0/24",
+                "MapPublicIpOnLaunch": "false",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrivateSubnetAssociationAcl": {
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation"
+        },
+        "PublicSubnet": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        "0",
+                        {
+                            "Fn::GetAZs": {
+                                "Ref": "AWS::Region"
+                            }
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.1.0/24",
+                "MapPublicIpOnLaunch": "true",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicSubnetAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PublicSubnetAssociationAcl": {
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation"
+        },
+        "PvtRouteTable": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "PvtSubnetAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PvtRouteTable"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSubnet"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "Route": {
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "RouteTable": {
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "VPC": {
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsHostnames": "true",
+                "EnableDnsSupport": "true",
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::VPC"
+        },
+        "VPCEndpoint": {
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "s3:*"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    "*"
+                                ]
+                            },
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "RouteTableIds": [
+                    {
+                        "Ref": "PvtRouteTable"
+                    }
+                ],
+                "ServiceName": {
+                    "Fn::Join": [
+                        ".",
+                        [
+                            "com.amazonaws",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "s3"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::VPCEndpoint"
+        },
+        "outBoundSSHPortsNetworkAclEntry": {
+            "Properties": {
+                "CidrBlock": "0.0.0.0/0",
+                "Egress": "true",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "PortRange": {
+                    "From": "22",
+                    "To": "22"
+                },
+                "Protocol": "6",
+                "RuleAction": "allow",
+                "RuleNumber": "103"
+            },
+            "Type": "AWS::EC2::NetworkAclEntry"
+        }
+    }
+}
