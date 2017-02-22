@@ -25,7 +25,7 @@ public class TableService {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new IllegalStateException("An error occurred while getting existing partitions.", ex);
         }
 
         return existingPartitions;
@@ -42,7 +42,7 @@ public class TableService {
                 System.out.printf("New partition [Spec: %s, Path: %s]%n", partition.spec(), partition.path());
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new IllegalStateException("An error occurred while adding partitions.", ex);
         }
     }
 
@@ -57,7 +57,7 @@ public class TableService {
                 System.out.printf("Removed partition [Spec: %s]%n", partitionSpec);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new IllegalStateException("An error occurred while removing partitions.", ex);
         }
     }
 
