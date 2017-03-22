@@ -19,6 +19,12 @@ public class MyRecordProcessor extends ManagedClientProcessor {
 	public void processRecords(List<Record> records,
 			IRecordProcessorCheckpointer checkpointer) {
 		LOG.info(String.format("Received %s Records", records.size()));
+		
+		// add a call to your business logic here!
+		//
+		// myLinkedClasses.doSomething(records)
+		//
+		//
 		try {
 			checkpointer.checkpoint();
 		} catch (KinesisClientLibDependencyException | InvalidStateException
