@@ -143,7 +143,7 @@ public class ManagedConsumer {
                     config.withInitialPositionInStream(InitialPositionInStream.valueOf(this.positionInStream));
 
                 LOG.info(String.format(
-                        "Amazon Kinesis Aggregators Managed Client prepared for %s on %s in %s (%s) using %s Max Records",
+                        "Amazon Kinesis Managed Client prepared for %s on %s in %s (%s) using %s Max Records",
                         config.getApplicationName(), config.getStreamName(),
                         config.getRegionName(), config.getWorkerIdentifier(),
                         config.getMaxRecords()));
