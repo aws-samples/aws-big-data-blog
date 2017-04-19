@@ -78,31 +78,31 @@
         <dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-core</artifactId>
-            <version>2.5.3</version>
+            <version>2.5.6</version>
         </dependency>
 
         <dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-local</artifactId>
-            <version>2.5.3</version>
+            <version>2.5.6</version>
         </dependency>
 
         <dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-hadoop</artifactId>
-            <version>2.5.3</version>
+            <version>2.5.6</version>
         </dependency>
 
         <dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-xml</artifactId>
-            <version>2.5.3</version>
+            <version>2.5.6</version>
         </dependency>
 
         <dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-platform</artifactId>
-            <version>2.5.3</version>
+            <version>2.5.6</version>
             <scope>test</scope>
         </dependency>
         <dependency>
