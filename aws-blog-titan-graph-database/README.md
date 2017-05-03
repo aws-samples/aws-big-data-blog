@@ -52,8 +52,9 @@ This example populates a Titan graph database backed by DynamoDB Local using the
     ```
 5. Open a graph using the Titan DynamoDB Storage Backend in the Gremlin shell.
 
-    ```
-    conf = new BaseConfiguration()
+
+```
+conf = new BaseConfiguration()
 conf.setProperty("storage.backend", "com.amazon.titan.diskstorage.dynamodb.DynamoDBStoreManager")
 conf.setProperty("storage.dynamodb.client.endpoint", "http://localhost:4567")
 conf.setProperty("index.search.backend", "elasticsearch")
@@ -63,4 +64,4 @@ conf.setProperty("index.search.elasticsearch.local-mode", "true")
 conf.setProperty("index.search.elasticsearch.inteface", "NODE")
 g = TitanFactory.open(conf)
 com.amazonaws.bigdatablog.titanrestaurants.RestaurantFactory.load(g)
-    ```
+```
