@@ -10,8 +10,8 @@ As a one-off operation, you'll need to install the Athena JDBC driver into a lib
 
 ```
 mkdir lib
-aws s3 cp s3://athena-downloads/drivers/AthenaJDBC41-1.0.0.jar lib/
-mvn install:install-file -Dfile=lib/AthenaJDBC41-1.0.0.jar -DgroupId=com.amazonaws -DartifactId=athena.jdbc41 -Dversion=1.0.0 -Dpackaging=jar -DgeneratePom=true
+aws s3 cp s3://athena-downloads/drivers/AthenaJDBC41-1.0.1.jar lib/
+mvn install:install-file -Dfile=lib/AthenaJDBC41-1.0.1.jar -DgroupId=com.amazonaws -DartifactId=athena.jdbc41 -Dversion=1.0.0 -Dpackaging=jar -DgeneratePom=true
 ```
 
 And then, to build:
