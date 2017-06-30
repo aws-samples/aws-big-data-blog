@@ -1,12 +1,15 @@
 #!/usr/bin/python
 
-# Author           : Rendy Oka
-# Created          : June 6, 2017
-# Description      : This script simulates tweets and stores them in Amazon DynamoDB.
-# Required modules :
-#  boto3      (https://aws.amazon.com/sdk-for-python/)
-#  names      (https://pypi.python.org/pypi/names/)
-#  loremipsum (https://pypi.python.org/pypi/loremipsum)
+# Copyright 2017-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License"). You may not use this file
+# except in compliance with the License. A copy of the License is located at
+#
+#     http://aws.amazon.com/asl/
+#
+# or in the "license" file accompanying this file. This file is distributed on an "AS IS"
+# BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License
+# for the specific language governing permissions and limitations under the License. 
 
 # Import modules
 from   loremipsum import get_sentences
