@@ -1,0 +1,110 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Kinesis Analytics Application for Kinesis Analytics click stream example",
+
+  "Parameters" : {
+    "SupportingStack": {
+      "Description" : "Stack name used when deploying to click stream example supporting elements.",
+      "Type": "String",
+      "ConstraintDescription" : "name of previous stack"
+    }
+  },
+  "Resources" : {
+    "KinesisAnomalyApplication" : {
+      "Type": "AWS::KinesisAnalytics::Application",
+      "Properties": {
+        "ApplicationName" : "KineisAnalyticsAnomalyApplication",
+        "ApplicationDescription" : "Kineis Analytics Anomaly Application",
+        "ApplicationCode" : { "Fn::Join": ["", [ "CREATE OR REPLACE STREAM \"CLICKSTREAM\" ( \n",
+                            "\t\"CLICKCOUNT\" DOUBLE\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE PUMP \"CLICKPUMP\" AS\n", 
+                            "INSERT INTO \"CLICKSTREAM\" (\"CLICKCOUNT\")\n", 
+                            "SELECT STREAM COUNT(*)\n",
+                            "FROM \"SOURCE_SQL_STREAM_001\"\n",
+                            "WHERE \"browseraction\" = 'Click'\n",
+                            "GROUP BY FLOOR(\n",
+                            "\t(\"SOURCE_SQL_STREAM_001\".ROWTIME - TIMESTAMP '1970-01-01 00:00:00')\n",
+                            "\t\tSECOND / 10 TO SECOND\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE STREAM \"IMPRESSIONSTREAM\" ( \n",
+                            "\t\"IMPRESSIONCOUNT\" DOUBLE\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE PUMP \"IMPRESSIONPUMP\" AS \n",
+                            "INSERT INTO \"IMPRESSIONSTREAM\" (\"IMPRESSIONCOUNT\") \n",
+                            "SELECT STREAM COUNT(*) \n",
+                            "FROM \"SOURCE_SQL_STREAM_001\"\n",
+                            "WHERE \"browseraction\" = 'Impression'\n",
+                            "GROUP BY FLOOR(\n",
+                            "\t(\"SOURCE_SQL_STREAM_001\".ROWTIME - TIMESTAMP '1970-01-01 00:00:00')\n",
+                            "\t\tSECOND / 10 TO SECOND\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE STREAM \"CTRSTREAM\" (\n",
+                            "\t\"CTR\" DOUBLE\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE PUMP \"CTRPUMP\" AS \n",
+                            "INSERT INTO \"CTRSTREAM\" (\"CTR\")\n",
+                            "SELECT STREAM \"CLICKCOUNT\" / \"IMPRESSIONCOUNT\" * 100.000 as \"CTR\"\n",
+                            "FROM \"IMPRESSIONSTREAM\",\n",
+                            "\t\"CLICKSTREAM\"\n",
+                            "WHERE \"IMPRESSIONSTREAM\".ROWTIME = \"CLICKSTREAM\".ROWTIME;\n\n",
+                            "CREATE OR REPLACE STREAM \"DESTINATION_SQL_STREAM\" (\n",
+                            "\t\"CTRPERCENT\" DOUBLE,\n",
+                            "\t\"ANOMALY_SCORE\" DOUBLE\n",
+                            ");\n\n",
+                            "CREATE OR REPLACE PUMP \"OUTPUT_PUMP\" AS \n",
+                            "INSERT INTO \"DESTINATION_SQL_STREAM\"\n", 
+                            "SELECT STREAM * FROM\n",
+                            "TABLE (RANDOM_CUT_FOREST( \n",
+                            "\t\t\tCURSOR(SELECT STREAM \"CTR\" FROM \"CTRSTREAM\"), --inputStream\n",
+                            "\t\t\t100, --numberOfTrees (default)\n",
+                            "\t\t\t12, --subSampleSize \n",
+                            "\t\t\t100000, --timeDecay (default)\n",
+                            "\t\t\t1) --shingleSize (default)\n",
+                            ")\n",
+                            "WHERE ANOMALY_SCORE > 2;\n"]] 
+                            },
+        "Inputs" : [ {
+          "NamePrefix" : "SOURCE_SQL_STREAM",
+          "InputSchema" : {
+            "RecordColumns" : [
+              { 
+                 "Name" : "browseraction",
+                 "SqlType" : "VARCHAR(16)",
+                 "Mapping" : "$.browseraction"  },
+              {
+                 "Name" : "site" ,
+                 "SqlType" : "VARCHAR(64)",
+                 "Mapping" : "$.site"  
+            }],
+            "RecordFormat" : {
+              "RecordFormatType" : "JSON",
+              "MappingParameters" : {
+                "JSONMappingParameters" : {"RecordRowPath" : "$"}
+              }
+            }
+          },
+          "KinesisStreamsInput" : {
+             "ResourceARN" : { "Fn::ImportValue" : { "Fn::Sub" : "${SupportingStack}-InputStreamArn" }},
+             "RoleARN" : { "Fn::ImportValue" : { "Fn::Sub" : "${SupportingStack}-KinesisAnalyticsRoleArn"}}
+          }
+        }]
+      }
+    },
+    "KinesisAnomalyApplicationOutput" : {
+      "Type" : "AWS::KinesisAnalytics::ApplicationOutput",
+      "Properties" : {
+        "ApplicationName" : {"Ref" : "KinesisAnomalyApplication" },
+        "Output" : {
+          "DestinationSchema" : { "RecordFormatType": "CSV" },
+          "KinesisStreamsOutput": { 
+            "ResourceARN":  { "Fn::ImportValue" : { "Fn::Sub" : "${SupportingStack}-OutputStreamArn" }},
+            "RoleARN": { "Fn::ImportValue" :{ "Fn::Sub" : "${SupportingStack}-KinesisAnalyticsRoleArn"}}
+          }, 
+          "Name" : "DESTINATION_SQL_STREAM"
+        }
+      }
+    }
+  }
+}
