@@ -126,12 +126,12 @@
     "CSEClickStreamEvent" : {
       "Type" : "AWS::SNS::Topic",
       "Properties" : {
-        "DisplayName" : "ClkStrEvt",
+        "DisplayName" : "ClkStrEv2",
         "Subscription" : [ 
           { "Endpoint" : { "Ref" : "email"}, "Protocol" : "email" }, 
           { "Endpoint" : { "Ref" : "SMS"}, "Protocol" : "sms" }
         ],
-        "TopicName" : "ClickStreamEvent"
+        "TopicName" : "ClickStreamEvent2"
       }
     },
     "CSEKinesisBeaconInputStream" : {
@@ -297,6 +297,31 @@
             ".amazonaws.com/",
             "example/beacon/stream"
         ]]}
+    },
+    "InputStream" : {
+      "Description" : "Kinesis Input Stream",
+      "Value" : {"Ref" : "CSEKinesisBeaconInputStream" },
+      "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-InputStream" }}
+    },
+    "InputStreamArn" : {
+      "Description" : "Kinesis Input Stream Arn",
+      "Value" : {"Fn::GetAtt" : [ "CSEKinesisBeaconInputStream", "Arn" ] },
+      "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-InputStreamArn" }}
+    },
+    "OutputStream" : {
+      "Description" : "Kinesis Output Stream",
+      "Value" : {"Ref" : "CSEKinesisBeaconOutputStream" },
+      "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-OutputStream" }}
+    },
+    "OutputStreamArn" : {
+      "Description" : "Kinesis Output Stream Arn",
+      "Value" : {"Fn::GetAtt" : [ "CSEKinesisBeaconOutputStream", "Arn"] },
+      "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-OutputStreamArn" }}
+    },
+    "KinesisAnalyticsRoleArn" : {
+      "Description" : "Role used by Kinesis Analytics to read and write to Streams",
+      "Value" : {"Fn::GetAtt" : [ "CSEKinesisAnalyticsRole" , "Arn" ] },
+      "Export" : {"Name" : {"Fn::Sub" : "${AWS::StackName}-KinesisAnalyticsRoleArn" }}
     }
   }
 }
