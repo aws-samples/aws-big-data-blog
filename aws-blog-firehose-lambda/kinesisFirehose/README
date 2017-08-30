@@ -4,14 +4,9 @@ The project is set up with a generic mvn archetype and the build occurs with Mav
 
 Java 8 is the prescribed JDK to compile to.
 
-Run mvn clean install to create the Lambda jar distribution (Java 8!!!)
+Run `mvn clean install` to create the Lambda jar distribution (Java 8!!!)
 
-Things to look for:
-Package com.amazonaws.proserv.lambda houses the lambda functions
-- at the top of each class in the is package are instance variables.  YOU MUST EDIT these instance variables.  At the time of this writing, there was not a way to pass parameters into Java-based
-  Lambda functions - and since a jar is used there is no need to extract them to propery files (but you very well can).
-
-
+To use a newer AWS SDK for Java run `mvn clean install -Daws-sdk.version=1.23.456`
 
 Helper classes are provided:
 com.amazonaws.proserv.PopulateKinesisData
@@ -23,4 +18,12 @@ com.amazonaws.proserv.SampleAWSCredentialProvider
 Configs if running locally:
  - resources/AwsCredentials.properties - put your creds here if you are running on your local  NOTE: make sure this file IS NOT EXCLUDED in your Pom.xml if running locally.  It is excluded so as not to be packaged and distributed (a non-no).
 
-    
+Configuration for AWS Lambda or running locally to added to the environment:
+ - FIREHOSE_ENDPOINT_URL eg. `https://firehose.eu-west-1.amazonaws.com`
+ - FIREHOSE_SIGNING_REGION eg. `us-west-1`
+ - DELIVERY_STREAM_NAME eg. `DevBlogEvents`
+ - DELIVERY_STREAM_ROLE_ARN eg. `arn:aws:iam::<AWS Acct Id>:role/firehose_blog_role`
+ - TARGET_BUCKET_ARN eg. `arn:aws:s3:::dev-firebase-events`
+ - TARGET_PREFIX eg. `events/`
+ - INTERVAL_SEC eg. `60`
+ - BUFFER_SIZE_MB eg. `2`
