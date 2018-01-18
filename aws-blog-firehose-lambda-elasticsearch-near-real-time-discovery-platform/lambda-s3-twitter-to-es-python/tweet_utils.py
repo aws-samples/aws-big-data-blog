@@ -56,6 +56,42 @@ tweet_mapping = {'properties':
                     }
                  }
 
+
+#https://www.elastic.co/blog/strings-are-dead-long-live-strings
+tweet_mapping_v5 = {'properties':
+                    {'timestamp_ms': {
+                                  'type': 'date'
+                                  },
+                     'text': {
+                                  'type': 'text'
+                              },
+                     'coordinates': {
+                          'properties': {
+                             'coordinates': {
+                                'type': 'geo_point'
+                             },
+                             'type': {
+                                'type': 'keyword'
+                            }
+                          }
+                     },
+                     'user': {
+                          'properties': {
+                             'id': {
+                                'type': 'long'
+                             },
+                             'name': {
+                                'type': 'text'
+                            }
+                          }
+                     },
+                     'sentiments': {
+                                  'type': 'keyword'
+                              }
+                    }
+                 }
+
+
 def _sentiment_analysis(tweet):
     tweet['emoticons'] = []
     tweet['sentiments'] = []
@@ -100,3 +136,9 @@ def get_tweet(doc):
     tweet['mentions'] = re.findall(r'@\w*', doc['text'])
     _sentiment_analysis(tweet)
     return tweet
+
+def get_tweet_mapping(es_version_number_str):
+    major_number = int(es_version_number_str.split('.')[0])
+    if major_number >= 5:
+        return tweet_mapping_v5
+    return tweet_mapping
