@@ -7,13 +7,13 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 import config
 from elasticsearch.exceptions import ElasticsearchException
-from tweet_utils import get_tweet, id_field, tweet_mapping
+from tweet_utils import get_tweet, id_field, get_tweet_mapping
 
 
 index_name = 'twitter'
 doc_type = 'tweet'
-mapping = {doc_type: tweet_mapping
-           }
+# mapping = {doc_type: tweet_mapping
+#            }
 bulk_chunk_size = config.es_bulk_chunk_size
 
 
@@ -24,6 +24,11 @@ def create_index(es,index_name,mapping):
 
 def load(tweets):    
     es = Elasticsearch(host = config.es_host, port = config.es_port)
+    es_version_number = es.info()['version']['number']
+    tweet_mapping = get_tweet_mapping(es_version_number)
+    mapping = {doc_type: tweet_mapping
+               }
+
 
     if es.indices.exists(index_name):
         print ('index {} already exists'.format(index_name))

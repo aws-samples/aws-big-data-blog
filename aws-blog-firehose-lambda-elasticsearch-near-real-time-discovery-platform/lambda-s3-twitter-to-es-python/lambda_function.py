@@ -1,14 +1,19 @@
+# -*- coding: utf-8 -*-
 '''
 Created on Oct 8, 2015
 
 @author: mentzera
 '''
 
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 import json
 import boto3
 import twitter_to_es
 
 s3 = boto3.client('s3')
+
 
 def lambda_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
@@ -48,3 +53,21 @@ def lambda_handler(event, context):
         print(e)
         print('Error loading data into ElasticSearch')
         raise e    
+
+
+if __name__ == '__main__':
+    event = {
+	    'Records': [
+		    {
+			    's3': {
+				    'bucket': {
+					    'name': 'YOUR_BUCKET'
+				    },
+				    'object': {
+					    'key': 'YOUR_KEY'
+				    }
+			    }
+		    }
+	    ]
+    }
+    lambda_handler(event, None)
