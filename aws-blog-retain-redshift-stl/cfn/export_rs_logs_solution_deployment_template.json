@@ -1,0 +1,464 @@
+{
+"AWSTemplateFormatVersion":"2010-09-09",
+"Description": "The main stack to deploy the Amazon Redshift clusters system tables export solution",
+"Parameters":{
+        "S3Bucket":{
+            "Type": "String",
+            "Default":"mybucket",
+            "Description":"This is the bucket where system tables will be exported under the prefix 'extract_redshift_query_logs/data' and code will be copied under the prefix 'extract_redshift_query_logs/code'. Just give the bucket name here"
+        },
+
+        "ExportEnabledClusters":{
+            "Type" : "String",
+            "Default" : "Comma seperated list of cluster names",
+            "Description" : "A coma separated list of cluster names for which query logs export is enabled. This gives the flexibility for a user to exclude certain clusters"
+        },
+        "DataStoreSecurityGroups":{
+            "Type": "List<AWS::EC2::SecurityGroup::Id>",
+            "Description": "The security groups that are associated with your data store. These security groups should have inbound connection to the query logs enabled Redshift clusters"
+        }
+
+
+},
+"Resources":{
+
+    "GlobalParameter1":{
+        "Type":"AWS::SSM::Parameter",
+        "Properties": {
+                    "Name": "redshift_query_logs.global.s3_prefix",
+                    "Type": "String",
+                    "Value": {"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data"]]},
+                    "Description": "S3 Path where the query logs are exported. Under this path, each exported table is partitioned by cluster name and date"
+                }
+        },
+        "GlobalParameter2":{
+            "Type":"AWS::SSM::Parameter",
+            "Properties": {
+                        "Name": "redshift_query_logs.global.tempdir",
+                        "Type": "String",
+                        "Value": {"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","temp"]]},
+                        "Description": "S3 temporary location where Glue jobs stage before writing to the final S3 location"
+                    }
+            },
+        "GlobalParameter3":{
+                "Type":"AWS::SSM::Parameter",
+                "Properties": {
+                            "Name": "redshift_query_logs.global.role",
+                            "Type": "String",
+                            "Value": {"Fn::Select":["1",{"Fn::Split":["/",{ "Fn::GetAtt" : [
+                                "GlueServiceRole",
+                                "Arn"
+                            ]}]}]},
+                            "Description": "The name of the role that the Glue jobs assume. Just the role name is sufficient. Complete ARN is not required"
+                        }
+            },
+        "GlobalParameter4":{
+                    "Type":"AWS::SSM::Parameter",
+                    "Properties": {
+                                "Name": "redshift_query_logs.global.enabled_cluster_list",
+                                "Type": "StringList",
+                                "Value": { "Ref" : "ExportEnabledClusters" },
+                                "Description": "A coma separated list of cluster names for which query logs export is enabled. This gives the flexibility for a user to exclude certain clusters"
+                            }
+            },
+
+            "GlueConnections"     : {
+                       "Type" : "Custom::GlueConnections",
+                       "Properties" : {
+                           "ServiceToken" : {
+                               "Fn::GetAtt" : [
+                                   "CreateGlueConnections",
+                                   "Arn"
+                               ]
+                           },
+                           "ClusterIds"       : {
+                               "Ref" : "ExportEnabledClusters"
+                           },
+                           "SecurityGroupList":{
+                               "Ref":"DataStoreSecurityGroups"
+                           }
+                       }
+                   },
+            "CodeArtifacts"     : {
+                              "Type" : "Custom::CodeArtifacts",
+                              "Properties" : {
+                                  "ServiceToken" : {
+                                      "Fn::GetAtt" : [
+                                          "CopyCodeArtifacts",
+                                          "Arn"
+                                      ]
+                                  },
+                                  "S3RootLocation" : {
+                                      "Ref" : "S3Bucket"
+                                  }
+                              }
+                          },
+                   "CreateGlueConnections" : {
+                       "Type" : "AWS::Lambda::Function",
+                       "Properties" : {
+                           "Description": "This Lambda function belongs the system tables export solution. It is created and invoked by CloudFormation template as part of the deployment process. This function is responsible for creating Glue connections based on the redshift clsuter configuration",
+                           "Code" : {
+
+                               "ZipFile" : { "Fn::Join" : ["\n", [
+                                    "import boto3",
+                                    "import cfnresponse",
+                                    "def lambda_handler(event, context):",
+                                    "    redshift=boto3.client('redshift')",
+                                    "    glue=boto3.client('glue')",
+                                    "    ssm=boto3.client('ssm')",
+                                    "    responseData = {}",
+                                    "    try:",
+                                    "       if event['RequestType']=='Create':",
+                                    "           clusterid_vpc_map=dict([(cg['ClusterIdentifier'],[cg['Endpoint']['Address'],cg['VpcId'],cg['DBName'],cg['Endpoint']['Port']]) for cg in redshift.describe_clusters()['Clusters']])",
+                                    "           vpc_subnet_map=dict([(sg['VpcId'],[sg['Subnets'][0]['SubnetIdentifier'],sg['Subnets'][0]['SubnetAvailabilityZone']['Name']]) for sg in redshift.describe_cluster_subnet_groups()['ClusterSubnetGroups']])",
+                                    "           print event",
+                                    "           securityGroupList=event['ResourceProperties']['SecurityGroupList']",
+                                    "           for clusterId in event['ResourceProperties']['ClusterIds'].split(','):",
+                                    "                glue.create_connection(ConnectionInput={'Name': 'rs_query_logs_{}'.format(clusterId),'Description': 'connection object for {}'.format(clusterId),'ConnectionType': 'JDBC', 'PhysicalConnectionRequirements': {'SubnetId': vpc_subnet_map[clusterid_vpc_map[clusterId][1]][0],'AvailabilityZone':vpc_subnet_map[clusterid_vpc_map[clusterId][1]][1], 'SecurityGroupIdList': securityGroupList}, 'ConnectionProperties': {'USERNAME': 'tempuser', 'JDBC_CONNECTION_URL': 'jdbc:redshift://{}:{}/{}'.format(clusterid_vpc_map[clusterId][0],clusterid_vpc_map[clusterId][3],clusterid_vpc_map[clusterId][2]), 'PASSWORD': 'temppassword'}})",
+                                    "                ssm.put_parameter(Name='redshift_query_logs.{}.connection'.format(clusterId),Type='String',Value='rs_query_logs_{}'.format(clusterId))",
+                                    "                ssm.put_parameter(Name='redshift_query_logs.{}.user'.format(clusterId),Type='String',Value='tempuser')",
+                                    "                ssm.put_parameter(Name='redshift_query_logs.{}.password'.format(clusterId),Type='SecureString',Value='temppassword')",
+                                    "           responseValue = 'created cluster specific properties for {} redshift clusters'.format(len(event['ResourceProperties']['ClusterIds']))",
+                                    "       else:",
+                                    "            try:",
+                                    "               for clusterId in event['ResourceProperties']['ClusterIds'].split(','):",
+                                    "                   glue.delete_connection(ConnectionName='rs_query_logs_{}'.format(clusterId))",
+                                    "                   ssm.delete_parameters(Names=['redshift_query_logs.{}.connection'.format(clusterId),'redshift_query_logs.{}.user'.format(clusterId),'redshift_query_logs.{}.password'.format(clusterId)])",
+                                    "               responseValue = 'deleted {} glue connection objects'.format(len(event['ResourceProperties']['ClusterIds']))",
+                                    "            except Exception as e:",
+                                    "                print 'The connection object must have been deleted outside the CFN. Intentionally supressing!'",
+                                    "                print e",
+                                    "                responseValue = 'Failed to delete {} glue connection and parameter objects'.format(len(event['ResourceProperties']['ClusterIds']))",
+                                    "                pass",
+                                    "       responseData['Data']=responseValue",
+                                    "       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')",
+                                    "    except Exception as e:",
+                                    "       print e",
+                                    "       print 'please check whether Redshfit cluster identifiers provided are valid '",
+                                    "       responseData = {}",
+                                    "       cfnresponse.send(event, context, cfnresponse.FAILED, responseData, 'CustomResourcePhysicalID')"
+                                ]]}
+
+                           },
+                           "Handler" : "index.lambda_handler",
+                           "Role"    : {
+                               "Fn::GetAtt" : [
+                                   "LambdaExecutionRole",
+                                   "Arn"
+                               ]
+                           },
+                           "Runtime" : "python2.7",
+                           "Timeout" : "30"
+                       }
+                   },
+                   "CopyCodeArtifacts" : {
+                       "Type" : "AWS::Lambda::Function",
+                       "Properties" : {
+                           "Description": "This Lambda function belongs the system tables export solution. It gets by the cloudformation template as part of solution deployment. As the name indicates it is responsible for copying the coded artifacts from GitHub to the S3 location you specify",
+                           "Code" : {
+
+                               "ZipFile" : { "Fn::Join" : ["\n", [
+                                   "import boto3",
+                                   "import cfnresponse",
+                                   "import urllib2",
+                                   "import gc",
+                                   "def lambda_handler(event,context):",
+                                   "    repo_name='https://github.com/aws-samples/aws-big-data-blog/aws-blog-retain-redshift-stl/'",
+                                   "    libs_map={'libs/pg8000.zip':repo_name+'blob/master/libs/pg8000.zip?raw=true',",
+                                   "    'libs/minimal-json-0.9.4.jar':repo_name+'blob/master/libs/minimal-json-0.9.4.jar?raw=true',",
+                                   "    'libs/spark-redshift_2.10-2.0.1.jar':repo_name+'blob/master/libs/spark-redshift_2.10-2.0.1.jar?raw=true',",
+                                   "    'libs/RedshiftJDBC4-1.2.10.1009.jar':repo_name+'blob/master/libs/RedshiftJDBC4-1.2.10.1009.jar?raw=true',",
+                                   "    'libs/RedshiftJDBC42-1.2.10.1009.jar':repo_name+'blob/master/libs/RedshiftJDBC42-1.2.10.1009.jar?raw=true',",
+                                   "    'scripts/extract_rs_logs_functions.zip':repo_name+'blob/master/scripts/extract_rs_logs_functions.zip?raw=true',",
+                                   "    'scripts/extract_rs_query_logs.py':repo_name+'raw/master/scripts/extract_rs_query_logs.py'",
+                                   "    }",
+                                   "    ",
+                                   "    s3_code_bucket=event['ResourceProperties']['S3RootLocation']",
+                                   "    print s3_code_bucket",
+                                   "    s3=boto3.client('s3')",
+                                   "    responseData = {}",
+                                   "    if event['RequestType']=='Create':",
+                                   "        for key in libs_map:",
+                                   "            f = urllib2.urlopen(libs_map[key])",
+                                   "            bytes=f.read()",
+                                   "            s3.put_object(Bucket=s3_code_bucket,Key='extract_redshift_query_logs/code/'+key,Body=bytes)",
+                                   "            bytes=None",
+                                   "            f=None",
+                                   "            gc.collect()",
+                                   "        responseValue='copied all the code artifacts'",
+                                   "        responseData['Data']=responseValue",
+                                   "        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')",
+                                   "    else:",
+                                   "        objects=[]",
+                                   "        try:",
+                                   "            objects.extend(s3.list_objects_v2(Bucket=s3_code_bucket,Prefix='extract_redshift_query_logs/code/libs')['Contents'])",
+                                   "            objects.extend(s3.list_objects_v2(Bucket=s3_code_bucket,Prefix='extract_redshift_query_logs/code/scripts')['Contents'])",
+                                   "            objects.extend(s3.list_objects_v2(Bucket=s3_code_bucket,Prefix='extract_redshift_query_logs/code/lambda')['Contents'])",
+                                   "        except:",
+                                   "            print 'objects must have deleted outside the cloud formation. Ignoring exceptons!!'",
+                                   "        [s3.delete_object(Bucket=s3_code_bucket,Key=obj['Key'])  for obj in objects ]",
+                                   "        responseValue='deleted all the code artifacts'",
+                                   "        responseData['Data']=responseValue",
+                                   "        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')",
+                                   "    return"
+                            ]]}
+                           },
+                           "Handler" : "index.lambda_handler",
+                           "Role"    : {
+                               "Fn::GetAtt" : [
+                                   "LambdaExecutionRole",
+                                   "Arn"
+                               ]
+                           },
+                           "Runtime" : "python2.7",
+                           "Timeout" : "30"
+                       }
+                   },
+                   "LambdaExecutionRole" : {
+                       "Type" : "AWS::IAM::Role",
+                       "Properties" : {
+                           "AssumeRolePolicyDocument" : {
+                               "Version" : "2012-10-17",
+                               "Statement" : [
+                                   {
+                                       "Effect" : "Allow",
+                                       "Principal" : {
+                                           "Service" : [
+                                               "lambda.amazonaws.com"
+                                           ]
+                                       },
+                                       "Action"    : [
+                                           "sts:AssumeRole"
+                                       ]
+                                   }
+                               ]
+                           },
+                           "Path"                     : "/",
+                           "Policies"                 : [
+                               {
+                                   "PolicyName" : "addglueconnectionsinline",
+                                   "PolicyDocument" : {
+                                       "Version" : "2012-10-17",
+                                       "Statement" : [
+                                           {
+                                               "Effect" : "Allow",
+                                               "Action" : [
+                                                   "logs:CreateLogGroup",
+                                                   "logs:CreateLogStream",
+                                                   "s3:*",
+                                                   "logs:PutLogEvents"
+                                               ],
+                                               "Resource" : ["arn:aws:logs:*:*:*",
+                                                    {"Fn::Join": ["",["arn:aws:s3:::",{ "Ref" : "S3Bucket" },"/extract_redshift_query_logs/*"]]}]
+                                           },
+                                           {
+                                               "Effect" : "Allow",
+                                               "Action" : [
+                                                   "glue:*",
+                                                   "iam:PassRole",
+                                                   "redshift:DescribeClusters",
+                                                   "redshift:DescribeClusterSubnetGroups",
+                                                   "s3:HeadBucket",
+                                                   "s3:List*",
+                                                   "ssm:DescribeParameters",
+                                                   "ssm:GetParameter",
+                                                   "ssm:GetParameters",
+                                                   "ssm:GetParametersByPath",
+                                                   "ssm:PutParameter",
+                                                   "ssm:DeleteParameters"
+                                               ],
+                                               "Resource" : "*"
+                                           }
+                                       ]
+                                   }
+                               }
+                           ]
+                       }
+                   },
+                   "GlueServiceRole" : {
+                       "Type" : "AWS::IAM::Role",
+                       "Properties" : {
+                           "AssumeRolePolicyDocument" : {
+                               "Version" : "2012-10-17",
+                               "Statement" : [
+                                   {
+                                       "Effect" : "Allow",
+                                       "Principal" : {
+                                           "Service" : [
+                                               "glue.amazonaws.com"
+                                           ]
+                                       },
+                                       "Action"    : [
+                                           "sts:AssumeRole"
+                                       ]
+                                   }
+                               ]
+                           },
+                           "ManagedPolicyArns":["arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"],
+                           "Path"                     : "/",
+                           "Policies"                 : [
+                               {
+                                   "PolicyName" : "glueservicerole_s3access",
+                                   "PolicyDocument" : {
+                                       "Version" : "2012-10-17",
+                                       "Statement" : [
+                                           {
+                                               "Effect" : "Allow",
+                                               "Action" : [
+                                                   "s3:*"
+                                               ],
+                                               "Resource" : {"Fn::Join": ["",["arn:aws:s3:::",{ "Ref" : "S3Bucket" },"/extract_redshift_query_logs/*"]]}
+                                           },
+                                           {
+                                               "Effect" : "Allow",
+                                               "Action" : [
+                                                   "s3:HeadBucket",
+                                                   "s3:List*"
+
+                                               ],
+                                               "Resource" : {"Fn::Join": ["",["arn:aws:s3:::",{ "Ref" : "S3Bucket" }]]}
+                                           },
+                                           {
+                                                       "Effect": "Allow",
+                                                       "Action": [
+                                                           "dynamodb:*"
+                                                       ],
+                                                       "Resource": [
+                                                           {
+                                                               "Fn::GetAtt" : [
+                                                                   "LastProcessedTSDynamoDBTable",
+                                                                   "Arn"
+                                                               ]
+                                                           }
+                                                       ]
+                                            },
+                                            {
+                                                "Effect": "Allow",
+                                                "Action": [
+                                                    "ssm:DescribeParameters",
+                                                    "ssm:GetParameter",
+                                                    "ssm:GetParameters",
+                                                    "ssm:GetParametersByPath"
+                                                ],
+                                                "Resource": [
+                                                    "*"
+                                                ]
+                                            }
+                                       ]
+                                   }
+                               }
+                           ]
+                       }
+                   },
+                   "LastProcessedTSDynamoDBTable":{
+                        "Type" : "AWS::DynamoDB::Table",
+                         "Properties" : {
+                            "KeySchema": [
+                                {
+                                    "AttributeName": "table_name",
+                                    "KeyType": "HASH"
+                                }
+                            ],
+                            "AttributeDefinitions": [
+                                {
+                                    "AttributeName": "table_name",
+                                    "AttributeType": "S"
+                                }
+                            ],
+                            "ProvisionedThroughput": {
+                                "ReadCapacityUnits": 5,
+                                "WriteCapacityUnits": 5
+                            },
+                            "TableName" : "rs_querylogs_last_processed_ts"
+                          }
+                },
+                "InvokeGlueETLToExportRedshiftLogsScheduledRule": {
+                      "Type": "AWS::Events::Rule",
+                      "Properties": {
+                        "Description": "Scheduled_Rule_Export_Redshift_System_Tables",
+                        "ScheduleExpression": "rate(10 minutes)",
+                        "State": "ENABLED",
+                        "Targets": [{
+                          "Arn": { "Fn::GetAtt": ["InvokeGlueETLToExportRedshiftLogs", "Arn"] },
+                          "Id": "InvokeGlueETLToExportRedshiftLogsV1"
+                        }]
+                      }
+                    },
+                    "PermissionForEventsToInvokeLambda": {
+                      "Type": "AWS::Lambda::Permission",
+                      "Properties": {
+                        "FunctionName": { "Ref": "InvokeGlueETLToExportRedshiftLogs" },
+                        "Action": "lambda:InvokeFunction",
+                        "Principal": "events.amazonaws.com",
+                        "SourceArn": { "Fn::GetAtt": ["InvokeGlueETLToExportRedshiftLogsScheduledRule", "Arn"] }
+                      }
+                  },
+                  "InvokeGlueETLToExportRedshiftLogs": {
+                      "Type" : "AWS::Lambda::Function",
+                      "Properties" : {
+                          "Description": "This Lambda function belongs the system tables export solution. It gets trigged according to the cloud watch schedule rule and it creates and invokes the Glue ETL for the respective Redshift cluster",
+                          "Code" : {
+
+                              "ZipFile" : { "Fn::Join" : ["\n", [
+                                  "import boto3",
+                                  "import os",
+                                  "g=boto3.client('glue')",
+                                  "rs=boto3.client('redshift')",
+                                  "ps=boto3.client('ssm')",
+                                  "def lambda_handler(event, context):",
+                                  "    artifacts_bucket=os.environ['artifacts_bucket']",
+                                  "    clusters=rs.describe_clusters()",
+                                  "    rs_query_logs_enabled_clusters=ps.get_parameter(Name='redshift_query_logs.global.enabled_cluster_list')['Parameter']['Value'].split(',')",
+                                  "    cluster_identifier_dict={x['ClusterIdentifier']:\"jdbc:redshift://{}:{}/{}\".format(x['Endpoint']['Address'],x['Endpoint']['Port'],x['DBName']) for x in clusters['Clusters'] if x['ClusterIdentifier'] in rs_query_logs_enabled_clusters}",
+                                  "    role=ps.get_parameter(Name='redshift_query_logs.global.role')['Parameter']['Value']",
+                                  "    temp_dir=ps.get_parameter(Name='redshift_query_logs.global.tempdir')['Parameter']['Value']",
+                                  "    region_name=boto3.session.Session().region_name",
+                                  "    for k in cluster_identifier_dict.keys():",
+                                  "        job=None",
+                                  "        print 'exporting logs for redshift cluster {}'.format(k)",
+                                  "        check_update_required_glue_connections(k)",
+                                  "        try:",
+                                  "            job = g.get_job(JobName=k+'_extract_rs_query_logs')",
+                                  "            job= job['Job']",
+                                  "        except Exception as e:",
+                                  "           print 'No existing job found! Creating new job'",
+                                  "           connection = ps.get_parameter(Name='redshift_query_logs.' + k + '.connection')['Parameter']['Value']",
+                                  "           job=g.create_job(Name=k+'_extract_rs_query_logs', Role=role,Command={'ScriptLocation': 's3://{}/extract_redshift_query_logs/code/scripts/extract_rs_query_logs.py'.format(artifacts_bucket),'Name':'glueetl'}, Connections={'Connections': [connection]}, DefaultArguments={ '--extra-jars': 's3://{}/extract_redshift_query_logs/code/libs/RedshiftJDBC42-1.2.10.1009.jar,s3://{}/extract_redshift_query_logs/code/libs/RedshiftJDBC4-1.2.10.1009.jar,s3://{}/extract_redshift_query_logs/code/libs/minimal-json-0.9.4.jar,s3://{}/extract_redshift_query_logs/code/libs/spark-redshift_2.10-2.0.1.jar'.format(artifacts_bucket,artifacts_bucket,artifacts_bucket,artifacts_bucket),'--REGION': region_name,'--CLUSTER_ENDPOINT':cluster_identifier_dict[k],'--TempDir': temp_dir,'--extra-files': 's3://{}/extract_redshift_query_logs/code/libs/pg8000.zip,s3://{}/extract_redshift_query_logs/code/scripts/extract_rs_logs_functions.zip'.format(artifacts_bucket,artifacts_bucket),'--extra-py-files': 's3://{}/extract_redshift_query_logs/code/libs/pg8000.zip,s3://{}/extract_redshift_query_logs/code/scripts/extract_rs_logs_functions.zip'.format(artifacts_bucket,artifacts_bucket)})",
+                                  "        g.start_job_run(JobName=job['Name'])",
+                                  "    return",
+                                  "def check_update_required_glue_connections(clusterid):",
+                                  "    username=ps.get_parameter(Name='redshift_query_logs.{}.user'.format(clusterid))['Parameter']['Value']",
+                                  "    password=ps.get_parameter(Name='redshift_query_logs.{}.password'.format(clusterid),WithDecryption=True)['Parameter']['Value']",
+                                  "    conn=g.get_connection(Name='rs_query_logs_'+clusterid)",
+                                  "    update_conn=conn['Connection']",
+                                  "    if update_conn['ConnectionProperties']['USERNAME'] == username and update_conn['ConnectionProperties']['PASSWORD'] == password:",
+                                  "      return",
+                                  "    update_conn['ConnectionProperties']['USERNAME'] = username",
+                                  "    update_conn['ConnectionProperties']['PASSWORD'] = password",
+                                  "    if 'LastUpdatedBy' in update_conn:",
+                                  "        update_conn.pop('LastUpdatedBy')",
+                                  "    if 'CreationTime' in update_conn:",
+                                  "        update_conn.pop('CreationTime')",
+                                  "    if 'LastUpdatedTime' in update_conn:",
+                                  "        update_conn.pop('LastUpdatedTime')",
+                                  "    g.update_connection(Name=update_conn['Name'],ConnectionInput=update_conn)",
+                                  "    return"
+                            ]]}
+                          },
+                          "Handler" : "index.lambda_handler",
+                          "Environment":{"Variables" : {"artifacts_bucket":{"Ref" : "S3Bucket"}}},
+                          "Role"    : {
+                              "Fn::GetAtt" : [
+                                  "LambdaExecutionRole",
+                                  "Arn"
+                              ]
+                          },
+                          "Runtime" : "python2.7",
+                          "Timeout" : "30"
+                      }
+                  }
+
+
+    }
+
+}
