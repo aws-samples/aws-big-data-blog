@@ -1,0 +1,2 @@
+ aws-blog-retain-system-tables-and-run-diagnostic-queries-spanning-multiple-amazon-redshift-clusters
+ Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved. 

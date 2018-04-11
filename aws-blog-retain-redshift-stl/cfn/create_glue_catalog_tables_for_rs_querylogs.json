@@ -1,0 +1,205 @@
+{
+
+        "AWSTemplateFormatVersion":"2010-09-09",
+        "Description": "The main stack to run the AWS Glue crawlers and create the tables for the exported Amazon Redshift system tables in the AWS Glue Data Catalog",
+        "Parameters":{
+                "S3Bucket":{
+                    "Type": "String",
+                    "Default":"mybucket",
+                    "Description":"Provide the name of the bucket. This is same bucket name you used while deploying the solution. This is the bucket where system tables are being exported under the prefix 'extract_redshift_query_logs/data'"
+                }
+            },
+        "Resources": {
+        "Database":{
+          "Type" : "AWS::Glue::Database",
+          "Properties" : {
+            "DatabaseInput" : {
+
+          "Description" : "Database for all the external table storing system tables spanning multiple clusters",
+          "Name" : "redshift_query_logs_db"
+
+        },
+            "CatalogId" : {"Ref":"AWS::AccountId"}
+          }
+        },
+
+        "ExternalSTLTablesCrawler":{
+            "Type" : "AWS::Glue::Crawler",
+             "DependsOn" : "Database",
+            "Properties" : {
+                "Role" :{
+                    "Fn::GetAtt" : [
+                        "GlueSystemTablesCrawlerRole",
+                        "Arn"
+                    ]
+                },
+                "DatabaseName" : "redshift_query_logs_db",
+                "Schedule" : {
+                        "ScheduleExpression": "cron(0 0/1 * * ? *)"
+                    },
+                "Targets" : {
+                    "S3Targets":[
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_query"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_querytext"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_utilitytext"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_ddltext"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_explain"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_alert_event_log"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_scan"]]}},
+                        {"Path":{"Fn::Join": ["/",["s3:/",{ "Ref" : "S3Bucket" },"extract_redshift_query_logs","data","stl_wlm_query"]]}}
+                    ],
+                },
+                "TablePrefix":"ext_",
+                "Name":"s3_exported_system_tables_crawler"
+            }
+        },
+
+        "GlueSystemTablesCrawlerRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Principal" : {
+                                "Service" : [
+                                    "glue.amazonaws.com"
+                                ]
+                            },
+                            "Action"    : [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "ManagedPolicyArns":["arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"],
+                "Path"                     : "/",
+                "Policies"                 : [
+                    {
+                        "PolicyName" : "glueservicerole_s3access",
+                        "PolicyDocument" : {
+                            "Version" : "2012-10-17",
+                            "Statement" : [
+                                {
+                                    "Effect" : "Allow",
+                                    "Action" : [
+                                        "s3:*"
+                                    ],
+                                    "Resource" : {"Fn::Join": ["",["arn:aws:s3:::",{ "Ref" : "S3Bucket" },"/extract_redshift_query_logs/*"]]}
+                                },
+                                {
+                                    "Effect" : "Allow",
+                                    "Action" : [
+                                        "s3:HeadBucket",
+                                        "s3:List*"
+
+                                    ],
+                                    "Resource" : {"Fn::Join": ["",["arn:aws:s3:::",{ "Ref" : "S3Bucket" }]]}
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "RunSTLTableCrawler"     : {
+                          "Type" : "Custom::RunSTLTableCrawler",
+                          "DependsOn" : "ExternalSTLTablesCrawler",
+                          "Properties" : {
+                              "ServiceToken" : {
+                                  "Fn::GetAtt" : [
+                                      "RunSTLTableCrawlerFunction",
+                                      "Arn"
+                                  ]
+                              }
+                          }
+                      },
+        "RunSTLTableCrawlerFunction" : {
+            "Type" : "AWS::Lambda::Function",
+            "Properties" : {
+                "Description": "This Lambda function will run the AWS Glue crawler 'rs_stl_crawler' which was created to crawl the exported Redshift system tables from S3 ",
+                "Code" : {
+
+                    "ZipFile" : { "Fn::Join" : ["\n", [
+                         "import boto3",
+                         "import cfnresponse",
+                         "def lambda_handler(event, context):",
+                         "    redshift=boto3.client('redshift')",
+                         "    glue=boto3.client('glue')",
+                         "    responseData = {}",
+                         "    try:",
+                         "       if event['RequestType']=='Create':",
+                         "           glue.start_crawler(Name='s3_exported_system_tables_crawler')",
+                         "       responseData['Data']='Success'",
+                         "       cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, 'CustomResourcePhysicalID')",
+                         "    except Exception as e:",
+                         "       print e",
+                         "       print 'please check whether Redshfit cluster identifiers provided are valid '",
+                         "       responseData = {}",
+                         "       cfnresponse.send(event, context, cfnresponse.FAILED, responseData, 'CustomResourcePhysicalID')"
+                     ]]}
+
+                },
+                "Handler" : "index.lambda_handler",
+                "Role"    : {
+                    "Fn::GetAtt" : [
+                        "RunCrawlerLambdaExecutionRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime" : "python2.7",
+                "Timeout" : "300"
+            }
+        },
+        "RunCrawlerLambdaExecutionRole" : {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Version" : "2012-10-17",
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Principal" : {
+                                "Service" : [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action"    : [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path"                     : "/",
+                "Policies"                 : [
+                    {
+                        "PolicyName" : "run_glue_crawler_inline",
+                        "PolicyDocument" : {
+                            "Version" : "2012-10-17",
+                            "Statement" : [
+                                {
+                                    "Effect" : "Allow",
+                                    "Action" : [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource" : ["arn:aws:logs:*:*:*"]
+                                },
+                                {
+                                    "Effect" : "Allow",
+                                    "Action" : [
+                                        "glue:StartCrawler",
+                                    ],
+                                    "Resource" : "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+}
