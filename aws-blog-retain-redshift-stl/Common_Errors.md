@@ -23,5 +23,9 @@ The solution deployment CloudFormation template originally creates the connectio
  * If the Glue connections fail follow the steps laid out above in the first issue
 
  ### Empty Dataset or missing partitions while querying Athena tables
- 
+
  The AWS Glue crawler _s3_exported_system_tables_crawler_ runs on an hourly basis to crawl the Amazon S3 location you provided to add new partitions. If you need the partitions to refresh more frequently, either run the crawler on-demand or run ```msck repair table <tablename>``` in the Athena console to refresh the metastore with latest partitions
+
+ ### Glue ETL to export system tables is running every 10 minutes
+ 
+ By default the CloudWatch event that controls the Lambda function to invoke Glue ETL is scheduled at 10 minute intervals. By reducing the CloudWatch event rate to a shorter duration, For example, 1 minute could lead to [ConcurrentRunsExceededException](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-api-exceptions.html#aws-glue-api-exceptions-ConcurrentRunsExceededException) as the Glue ETL jobs are created with default concurrency value 1. Depending on your Redshift cluster query load, you can change the CloudWatch event,  <<stack_name>>InvokeGlueETLToExport<<dynamic cfn id>>, to increase or decrease the event rate

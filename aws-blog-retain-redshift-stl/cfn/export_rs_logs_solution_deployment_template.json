@@ -11,11 +11,11 @@
         "ExportEnabledClusters":{
             "Type" : "String",
             "Default" : "Comma seperated list of cluster names",
-            "Description" : "A coma separated list of cluster names for which query logs export is enabled. This gives the flexibility for a user to exclude certain clusters"
+            "Description" : "A coma separated list of cluster names for which query logs export is enabled. This gives the flexibility to enable the export solution for specific Redshift clusters"
         },
         "DataStoreSecurityGroups":{
             "Type": "List<AWS::EC2::SecurityGroup::Id>",
-            "Description": "The security groups that are associated with your data store. These security groups should have inbound connection to the query logs enabled Redshift clusters"
+            "Description": "The security groups that are associated with your data store. These security groups should have inbound connection to the Redshift clusters for which the STL table export solution is enabled"
         }
 
 
@@ -163,14 +163,14 @@
                                    "import urllib2",
                                    "import gc",
                                    "def lambda_handler(event,context):",
-                                   "    repo_name='https://github.com/aws-samples/aws-big-data-blog/aws-blog-retain-redshift-stl/'",
-                                   "    libs_map={'libs/pg8000.zip':repo_name+'blob/master/libs/pg8000.zip?raw=true',",
-                                   "    'libs/minimal-json-0.9.4.jar':repo_name+'blob/master/libs/minimal-json-0.9.4.jar?raw=true',",
-                                   "    'libs/spark-redshift_2.10-2.0.1.jar':repo_name+'blob/master/libs/spark-redshift_2.10-2.0.1.jar?raw=true',",
-                                   "    'libs/RedshiftJDBC4-1.2.10.1009.jar':repo_name+'blob/master/libs/RedshiftJDBC4-1.2.10.1009.jar?raw=true',",
-                                   "    'libs/RedshiftJDBC42-1.2.10.1009.jar':repo_name+'blob/master/libs/RedshiftJDBC42-1.2.10.1009.jar?raw=true',",
-                                   "    'scripts/extract_rs_logs_functions.zip':repo_name+'blob/master/scripts/extract_rs_logs_functions.zip?raw=true',",
-                                   "    'scripts/extract_rs_query_logs.py':repo_name+'raw/master/scripts/extract_rs_query_logs.py'",
+                                   "    repo_name='https://github.com/aws-samples/aws-big-data-blog/raw/master/aws-blog-retain-redshift-stl/'",
+                                   "    libs_map={'libs/pg8000.zip':repo_name+'libs/pg8000.zip?raw=true',",
+                                   "    'libs/minimal-json-0.9.4.jar':repo_name+'libs/minimal-json-0.9.4.jar?raw=true',",
+                                   "    'libs/spark-redshift_2.10-2.0.1.jar':repo_name+'libs/spark-redshift_2.10-2.0.1.jar?raw=true',",
+                                   "    'libs/RedshiftJDBC4-1.2.10.1009.jar':repo_name+'libs/RedshiftJDBC4-1.2.10.1009.jar?raw=true',",
+                                   "    'libs/RedshiftJDBC42-1.2.10.1009.jar':repo_name+'libs/RedshiftJDBC42-1.2.10.1009.jar?raw=true',",
+                                   "    'scripts/extract_rs_logs_functions.zip':repo_name+'scripts/extract_rs_logs_functions.zip?raw=true',",
+                                   "    'scripts/extract_rs_query_logs.py':repo_name+'scripts/extract_rs_query_logs.py'",
                                    "    }",
                                    "    ",
                                    "    s3_code_bucket=event['ResourceProperties']['S3RootLocation']",
