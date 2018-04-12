@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the code that supports the [AWS Big Data Blog Post](https://blogs.aws.amazon.com/bigdata/)
+This repository contains the code that supports the [AWS Big Data Blog Post](https://aws.amazon.com/blogs/big-data/how-to-retain-system-tables-data-spanning-multiple-amazon-redshift-clusters-and-run-cross-cluster-diagnostic-queries)
 
 ### Usecase Description
 Amazon Redshift is a warehouse service that logs the history of the system in STL log tables. The STL log tables manage disk space by retaining only two to five days of log history, depending on log usage and available disk space.
