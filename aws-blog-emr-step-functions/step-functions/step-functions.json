@@ -1,0 +1,80 @@
+{
+   "Comment": "Spark ETL State Machine",
+   "StartAt": "MilesPerRate Job",
+   "States": {
+       "MilesPerRate Job": {
+           "Type": "Task",
+           "Resource": "arn:aws:lambda:us-east-1:145744019422:function:blog-miles-per-rate-job-submit-function",
+           "ResultPath": "$.jobId",
+           "Next": "Wait for MilesPerRate job to complete"
+       },
+       "Wait for MilesPerRate job to complete": {
+           "Type": "Wait",
+           "Seconds": 15,
+           "Next": "Query MilesPerRate job status"
+       },
+       "Query MilesPerRate job status": {
+           "Type": "Task",
+           "Resource": "arn:aws:lambda:us-east-1:145744019422:function:blog-spark-job-status-function",
+           "Next": "MilesPerRate job complete?",
+           "ResultPath": "$.jobStatus"
+       },
+       "MilesPerRate job complete?": {
+           "Type": "Choice",
+           "Choices": [{
+               "Variable": "$.jobStatus",
+               "StringEquals": "success",
+               "Next": "RateCodeStatus Job"
+           },{
+               "Variable": "$.jobStatus",
+               "StringEquals": "dead",
+               "Next": "MilesPerRate job failed"
+           }],
+           "Default": "Wait for MilesPerRate job to complete"
+       },
+       "MilesPerRate job failed": {
+           "Type": "Fail",
+           "Error": "MilesPerRate Job",
+           "Cause": "MilesPerRate job job did not complete successfully. Please check logs."
+       },
+       "RateCodeStatus Job": {
+           "Type": "Task",
+           "Resource": "arn:aws:lambda:us-east-1:145744019422:function:blog-rate-code-status-job-submit-function",
+           "ResultPath": "$.jobId",
+           "Next": "Wait for RateCodeStatus job to complete"
+       },
+       "Wait for RateCodeStatus job to complete": {
+           "Type": "Wait",
+           "Seconds": 15,
+           "Next": "Query RateCodeStatus job status"
+       },
+       "Query RateCodeStatus job status": {
+           "Type": "Task",
+           "Resource": "arn:aws:lambda:us-east-1:145744019422:function:blog-spark-job-status-function",
+           "Next": "RateCodeStatus job complete?",
+           "ResultPath": "$.jobStatus"
+       },
+       "RateCodeStatus job complete?": {
+       "Type": "Choice",
+       "Choices": [{
+               "Variable": "$.jobStatus",
+               "StringEquals": "success",
+               "Next": "RateCodeStatus job finished"
+           },{
+               "Variable": "$.jobStatus",
+               "StringEquals": "dead",
+               "Next": "RateCodeStatus job failed"
+           }],
+           "Default": "Wait for RateCodeStatus job to complete"
+       },
+       "RateCodeStatus job failed": {
+           "Type": "Fail",
+           "Error": "RateCodeStatus Job",
+           "Cause": "RateCodeStatus job did not complete successfully. Please check logs."
+       },
+       "RateCodeStatus job finished": {
+           "Type": "Pass",
+           "End": true
+       }
+   }
+}
