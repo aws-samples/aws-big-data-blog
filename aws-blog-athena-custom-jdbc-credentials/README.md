@@ -8,6 +8,7 @@ You can use the AWS Security Token Service (AWS STS) to create and provide trust
 
 ### Pre-requisites
 
+
  * Java 8 is installed
  * SQL workbench is installed on your laptop or Windows EC2 instance.(http://www.sql-workbench.net/Workbench-Build123.zip)
 
