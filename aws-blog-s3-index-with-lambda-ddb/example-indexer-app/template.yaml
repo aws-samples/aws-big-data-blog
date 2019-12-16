@@ -9,7 +9,7 @@ Resources:
     Properties:
       Description: Adds index entries to DynamoDB for each new S3 object that matches a given criteria.
       Runtime: nodejs12.x
-      CodeUri: lambda-src
+      CodeUri: s3Indexer.js
       Handler: s3Indexer.handler
       MemorySize: 512
       Timeout: 30
