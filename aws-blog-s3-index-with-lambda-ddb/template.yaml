@@ -31,8 +31,57 @@ Resources:
     Type: 'AWS::S3::Bucket'
 
   IndexTable:
-    Type: AWS::Serverless::SimpleTable
+    Type: AWS::DynamoDB::Table
     Properties:
-      PrimaryKey:
-        Name: Key
-        Type: String
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        -
+          AttributeName: CustID
+          AttributeType: S
+        -
+          AttributeName: TS-ServerID
+          AttributeType: S
+        -
+          AttributeName: HasTransaction
+          AttributeType: S
+        -
+          AttributeName: ServerID
+          AttributeType: S
+      KeySchema:
+        -
+          AttributeName: CustID
+          KeyType: HASH
+        -
+          AttributeName: TS-ServerID
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        -
+          IndexName: ServerIndex
+          KeySchema:
+            -
+              AttributeName: ServerID
+              KeyType: HASH
+            -
+              AttributeName: TS-ServerID
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes: 
+              - Key
+            ProjectionType:
+              INCLUDE
+
+      LocalSecondaryIndexes:
+        -
+          IndexName: CustomerTransactions
+          KeySchema:
+            -
+              AttributeName: CustID
+              KeyType: HASH
+            -
+              AttributeName: HasTransaction
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes: 
+              - Key
+            ProjectionType:
+              INCLUDE
