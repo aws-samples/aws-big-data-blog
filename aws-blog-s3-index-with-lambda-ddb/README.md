@@ -5,167 +5,53 @@ The code in this directory accompanies the AWS Big Data Blog on Building and Mai
 
 This subtree contains the following code samples:
 
-- **s3-index-lambda:** Simple JS implementation of a AWS Lambda function for indexing S3 buckets
+- **example-indexer-app:** Example serverless application demonstrating how to implement an Amazon DynamoDB object index with AWS Lambda
 - **s3-log-generator:** Java program used to generate dummy objects and upload them to S3 in order to test the index system.
 - **query-examples:** Example scripts for querying the index
-- **s3-index-example.template:** AWS CloudFormation template for creating an S3 bucket, Amazon DynamoDB table and Lambda function.
 
-## Deploying the sample via the AWS Console
+## Deploying the example application
 
-A video walkthrough of these steps is available (here)[https://s3.amazonaws.com/awsbigdatablog/S3%2BIndex%2BDeployment%2BWalkthrough.mp4].
+To deploy the example application you must have the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) installed locally. Please follow the instructions on the linked page to complete the installation before continuing.
 
-To deploy the example index, you must create the following resources:
+1. Clone this repository to your local machine.
+1. Open a command prompt and change directories to the `example-indexer-app` subdirectory within `aws-blog-s3-index-with-lambda-ddb`.
+1. Run `sam deploy --guided`.
+1. When prompted, enter a unique name for the stack (e.g. "S3IndexerSample").
+1. Enter the region you wish to deploy the application to.
+1. Hit <Enter> to accept the defaults for each of the next options.
+1. The SAM CLI should now deploy the application to your AWS account.
 
-1. S3 bucket to be indexed
-1. DynamoDB table to hold the meta-data index itself
-1. IAM Role for the Lambda function to assume that grants permission for reading from the S3 bucket and writting to DynamoDB.
-1. Lambda function for handling S3 object creation events
+**After the deployment is complete you need to add an additional permission to the IAM role created for the indexer function**
 
+1. Look up the physical name of the S3 bucket created by the CloudFormation stack using the CloudFormation management console.
+    1. Select your stack.
+    1. Select the resources tab.
+    1. Copy the **Physical ID** value for the **BucketToIndex** logical resource.
+1. Open the IAM management console.
+1. Open the **Roles** list page from the left navigation menu.
+1. Select the role with a name that follows the pattern **[Your Stack Name]-IndexerFunctionRole-[Unique ID]**.
+1. Click the link to **Add inline policy** on the right side of the **Permissions policies** section.
+1. Select the **JSON** tab.
+1. Paste the following policy template into the input box and replace the [YOUR BUCKET NAME] place holder with the name of the bucket created by your stack.
 
-The following steps assume you have created the S3 bucket and it is named "mybucket". You should replace any instances of the string "mybucket" with the name of the bucket you have created.
-
-### Creating the DynamoDB table
-
-These instructions are intended to guide you through the creation of a DynamoDB table using the AWS console. You can also use the CLI to create a table with the same specification.
-
-#### Create a DynamoDB table with the following properties
-
-| Property |  Value          |
-|----------|-----------------|
-| **Primary Key Type** | Hash and Range |
-| **Primary Key Hash Attribute**  | CustID |
-| **Primary Key Range Attribute** | TS-ServerID |
-
-Note: For your table name you must use the "-index" suffix with the name of your bucket. This is how the Lambda function calculates the name of table based on the S3 event.
-
-#### Add a local secondary index with the following properties
-
-| Property |  Value          |
-|----------|-----------------|
-| **Index Range Key Type** | String |
-| **Index Range Key** | HasTransaction |
-| **Index Name** | CustomerTransactions |
-| **Projected Attributes** | Specify Attributes |
-|                      |    Key             |
-
-#### Add a global secondary index with the following properties
-
-| Property |  Value          |
-|----------|-----------------|
-| **Index Hash Key Type** | String |
-| **Index Hash Key**      | ServerID |
-| **Index Range Key Type** | String |
-| **Index Range Key**     | TS-ServerID |
-| **Index Name**           | ServerIndex |
-| **Projected Attributes** | Specify Attributes |
-|                      |    Key             |
-
-#### Provision throughput
-
-You will need to provision read and write capacity for both the table itself and the global secondary index. The log generation program provided in this repository allows you to specify the rate at which objects are generated. In order to support a given object creation rate you need to provision the same amount of write capacity units for each index. For example, if you create objects at a rate of 10 per second you need a total of 20 write capacity units, 10 for the table and 10 for the ServerIndex global secondary index.
-
-For this example you should only need to provision 1 read capacity unit for the table and the ServerIndex.
-
-#### Finalize table creation
-
-For the purposes of this demo you can disable streams and basic alarms.
-
-### Creating the Lambda execution Role
-
-In order for the Lambda function to execute with the appropriate permissions you'll need to create an IAM role for it to use.
-
-To create a role through the console navigate to the IAM service, select Roles from the left nav, and click "Create New Role".
-
-Enter **S3IndexFunction** for the role name.
-
-Select **AWS Lambda** as the role type.
-
-Attach the **AWSLambdaBasicExecutionRole** policy to the role.
-
-After creating the role select it and add an inline policy.
-
-Select **Custom Policy**.
-
-Enter **s3-read-ddb-write** for the policy name.
-
-Copy the following document into the Policy Document text area.
-
-```JSON
+```json
 {
     "Version": "2012-10-17",
     "Statement": [
         {
+            "Sid": "VisualEditor0",
             "Effect": "Allow",
-            "Action": [
-                "s3:GetObject"
-            ],
-            "Resource": [
-                "*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "dynamodb:PutItem"
-            ],
-            "Resource": [
-                "*"
-            ]
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::[YOUR BUCKET NAME]/*"
         }
     ]
 }
 ```
+1. Select **Review policy**.
+1. Enter "S3Access" in the **Name** field.
+1. Select **Create policy** to create the policy.
 
-Apply the new policy to your role.
-
-### Creating the Lambda Function
-
-The final step of the deployment is to create the Lambda function that will handle our S3 bucket's creation events.
-
-Create a new function with the following properties:
-
-| Property |  Value          |
-|----------|-----------------|
-| **Name** | S3IndexFunction |
-| **Runtime** | Node.js |
-| **Code entry type** | Edit code inline |
-| **Code** | Copy from [here](https://github.com/mikedeck/aws-big-data-blog/blob/master/aws-blog-s3-index-with-lambda-ddb/s3-index-lambda/index.js) |
-| **Handler** | index.handler |
-| **Role** | S3IndexFunction (created in previous step) |
-| **Memory** | 128 MB |
-| **Timeout** | 3 seconds |
-
-After creating the function add an event source under the Event sources tab with the following properties.
-
-| Property |  Value          |
-|----------|-----------------|
-| **Event source type** | S3 |
-| **Bucket** | The bucket you wish to index |
-| **Event type** | Object created |
-| **Prefix** | blank |
-| **Suffix** | blank |
-| **Enable event source** | Enable now |
-
-At this point any objects that are added to your S3 bucket that have a key in the correct format should be automatically added to the DynamoDB index table.
-
-The expected key format is [4-digit hash]/[server id]/[year]-[month]-[day]-[hour]-[minute]/[customer id]-[epoch timestamp].data
-
-Example: a5b2/i-31cc02/2015-07-05-00-25/87423-1436055953839.data
-
-## Deploying the sample via CloudFormation
-
-To use the provided s3-index-example.template CloudFormation template complete the following steps:
-
- 1. Create a zip file containing the index.js file from the s3-index-lambda directory.
- 2. Upload the zip file to an S3 bucket.
- 3. Launch the s3-index-example.template via CloudFormation with the following parameters:
- 
- 	* BucketName: Name of the new bucket to create that will be indexed
- 	* LambdaCodeBucket: Name of the bucket where you uploaded the zip file in step 2
- 	* LambdaCodeKey: The S3 key of the zip file uploaded in step 2
- 
- 4. After the CloudFormation stack is created, add an event source to the Lambda function for the "Object created" event on the new S3 bucket.
-
+You can now test the system.
 
 ## Testing the system
 

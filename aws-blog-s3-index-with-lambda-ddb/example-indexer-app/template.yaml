@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: SAM app providing an example of how to index Amazon S3 objects using Amazon DynamoDB.
+
+Resources:
+  IndexerFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Description: Adds index entries to DynamoDB for each new S3 object that matches a given criteria.
+      Runtime: nodejs12.x
+      CodeUri: s3Indexer.js
+      Handler: s3Indexer.handler
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          INDEX_TABLE: !Ref IndexTable
+      Policies:
+        DynamoDBCrudPolicy:
+          TableName: !Ref IndexTable
+      Events:
+        BucketEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref BucketToIndex
+            Events:
+              - 's3:ObjectCreated:*'
+  
+  BucketToIndex:
+    Type: 'AWS::S3::Bucket'
+
+  IndexTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        -
+          AttributeName: CustID
+          AttributeType: S
+        -
+          AttributeName: TS-ServerID
+          AttributeType: S
+        -
+          AttributeName: HasTransaction
+          AttributeType: S
+        -
+          AttributeName: ServerID
+          AttributeType: S
+      KeySchema:
+        -
+          AttributeName: CustID
+          KeyType: HASH
+        -
+          AttributeName: TS-ServerID
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        -
+          IndexName: ServerIndex
+          KeySchema:
+            -
+              AttributeName: ServerID
+              KeyType: HASH
+            -
+              AttributeName: TS-ServerID
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes: 
+              - Key
+            ProjectionType:
+              INCLUDE
+
+      LocalSecondaryIndexes:
+        -
+          IndexName: CustomerTransactions
+          KeySchema:
+            -
+              AttributeName: CustID
+              KeyType: HASH
+            -
+              AttributeName: HasTransaction
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes: 
+              - Key
+            ProjectionType:
+              INCLUDE

@@ -1,0 +1,38 @@
+{
+    "Records": [
+        {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-east-1",
+            "eventTime": "2019-12-16T17:17:44.542Z",
+            "eventName": "ObjectCreated:Put",
+            "userIdentity": {
+                "principalId": "AWS:AIDAJKH44GLYP4EEI3NEI"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "72.21.196.68"
+            },
+            "responseElements": {
+                "x-amz-request-id": "080744371D1F28FE",
+                "x-amz-id-2": "KQPXiC2GciL3BfNWzRK+MWgODxllxE1LlwfH4iGtBGYfEoEzFLsk2vkvuPiFQsxCcJa9gzLJapE="
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "ac15c1e7-a20d-4ec7-adea-6372b8bca5c0",
+                "bucket": {
+                    "name": "s3indexerblog-buckettoindex-q970b9o9i4sq",
+                    "ownerIdentity": {
+                        "principalId": "A3GTKS4241KF7T"
+                    },
+                    "arn": "arn:aws:s3:::s3indexerblog-buckettoindex-q970b9o9i4sq"
+                },
+                "object": {
+                    "key": "prefix/serverId/2019-12-16-00-00/12345-1576516600.data",
+                    "size": 5,
+                    "eTag": "0d599f0ec05c3bda8c3b8a68c32a1b47",
+                    "sequencer": "005DF7BC38764C9401"
+                }
+            }
+        }
+    ]
+}
