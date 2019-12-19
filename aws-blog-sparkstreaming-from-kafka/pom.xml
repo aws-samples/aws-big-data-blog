@@ -12,7 +12,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<scala.version>2.11.8</scala.version>
+		<scala.version>2.13.1</scala.version>
 
 		<scala.tools.version>2.11</scala.tools.version>
 		<spark.version>2.0.0</spark.version>
