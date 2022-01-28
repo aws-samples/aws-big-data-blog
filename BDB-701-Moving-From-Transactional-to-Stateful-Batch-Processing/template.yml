@@ -1,0 +1,1103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Doing More with Less CloudFormation
+ 
+Globals:
+  Function:
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: Demo
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.11.0/24
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.20.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.21.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  NoIngressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "no-ingress-sg"
+      GroupDescription: "Security group with no ingress rule"
+      SecurityGroupEgress:
+      - CidrIp: "0.0.0.0/0"
+        FromPort: '0'
+        IpProtocol: tcp
+        ToPort: '65535'
+      VpcId: !Ref VPC
+
+  LambdaSecurityGroup:
+    Properties:
+      GroupDescription: Allow all outbound access
+      SecurityGroupEgress:
+      - CidrIp: "0.0.0.0/0"
+        FromPort: '0'
+        IpProtocol: tcp
+        ToPort: '65535'
+      Tags:
+      - Key: Name
+        Value: "Lambda VPC security group"
+      VpcId: !Ref VPC
+    Type: AWS::EC2::SecurityGroup
+
+
+
+  # Private Subnet Security Groups and Inbound/Outbound Rules
+
+  # TCP Ingress
+  PrivateMasterSecurityGroupIngressTcpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateMasterSecurityGroupIngressTcpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateSlaveSecurityGroupIngressTcpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateSlaveSecurityGroupIngressTcpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+
+  # UDP Ingress
+  PrivateMasterSecurityGroupIngressUdpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: udp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateMasterSecurityGroupIngressUdpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: udp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateSlaveSecurityGroupIngressUdpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: udp
+      FromPort: '0'
+      ToPort: '65535'
+  PrivateSlaveSecurityGroupIngressUdpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: udp
+      FromPort: '0'
+      ToPort: '65535'
+
+  # ICMP Ingress
+  PrivateMasterSecurityGroupIngressIcmpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: icmp
+      FromPort: '-1'
+      ToPort: '-1'
+  PrivateMasterSecurityGroupIngressIcmpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: icmp
+      FromPort: '-1'
+      ToPort: '-1'
+  PrivateSlaveSecurityGroupIngressIcmpSlave:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: icmp
+      FromPort: '-1'
+      ToPort: '-1'
+  PrivateSlaveSecurityGroupIngressIcmpMaster:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      IpProtocol: icmp
+      FromPort: '-1'
+      ToPort: '-1'
+
+  # TCP Ingress from Service Access Security Group
+  PrivateSlaveSecurityGroupIngressTcpServiceAccess:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRServiceAccessSecurityGroupVpc
+      IpProtocol: tcp
+      FromPort: '8443'
+      ToPort: '8443'
+  PrivateMasterSecurityGroupIngressTcpServiceAccess:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: EMRMasterSecurityGroupPrivateVpc
+      SourceSecurityGroupId:
+        Ref: EMRServiceAccessSecurityGroupVpc
+      IpProtocol: tcp
+      FromPort: '8443'
+      ToPort: '8443'
+
+  # Set up EMR Slave Security group
+  EMRSlaveSecurityGroupPrivateVpc:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: 'Slave group for EMR clusters in private Subnets.'
+      GroupName: 'Demo-ElasticMapReduce-slave-private'
+      VpcId: {Ref: VPC}
+      SecurityGroupEgress:
+        - CidrIp: '0.0.0.0/0'
+          FromPort: '0'
+          IpProtocol: -1 # -1 denotes ALL
+          ToPort: '65535'
+
+  #Set up EMR Master Security group        
+  EMRMasterSecurityGroupPrivateVpc:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: 'Master group for EMR clusters in private subnets.'
+      GroupName:  'Demo-ElasticMapReduce-master-private'
+      VpcId: {Ref: VPC}
+      SecurityGroupEgress:
+        - CidrIp: '0.0.0.0/0'
+          FromPort: '0'
+          IpProtocol: -1 # -1 denotes ALL
+          ToPort: '65535'
+
+  #Set up EMR Service Access Security group      
+  EMRServiceAccessSecurityGroupVpc:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: 'Service Access security group for EMR. Needed for private subnet access.'
+      GroupName:  'Demo-ElasticMapReduce-ServiceAccess'
+      VpcId: {Ref: VPC}
+      SecurityGroupEgress:
+        - DestinationSecurityGroupId:
+            Ref: EMRMasterSecurityGroupPrivateVpc
+          FromPort: '8443'
+          ToPort: '8443'
+          IpProtocol: tcp
+        - DestinationSecurityGroupId:
+            Ref: EMRSlaveSecurityGroupPrivateVpc
+          FromPort: '8443'
+          ToPort: '8443'
+          IpProtocol: tcp
+
+
+  #IAM Instance profile to launch EMR cluster
+  EmrEc2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: 'Demo_EMR_EC2_Role'
+      Roles:
+        - { Ref: EMREC2Role }
+  EmrInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: 'Demo_EMR_Role'
+      Roles:
+        - { Ref: EMRRole }
+
+  # IAM roles used for launching EMR cluster
+  EMREC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'Demo_EMR_EC2_Role'
+      ManagedPolicyArns: [
+        'arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role',
+        'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      ]
+      AssumeRolePolicyDocument:
+         Statement:
+           -
+             Action: ['sts:AssumeRole']
+             Effect: Allow
+             Principal:
+               Service:
+                 - 'ec2.amazonaws.com'
+         Version: '2012-10-17'
+  EMRRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'Demo_EMR_Role'
+      ManagedPolicyArns: [
+        'arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole'
+      ]
+      AssumeRolePolicyDocument:
+         Statement:
+           -
+             Action: ['sts:AssumeRole']
+             Effect: Allow
+             Principal:
+               Service:
+                 - 'elasticmapreduce.amazonaws.com'
+         Version: '2012-10-17'   
+
+  # Policy to allow the EMR hosts to query for ElastiCache cluster information
+  ElastiCacheAccessByEMRRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - "elasticache:DescribeReplicationGroups"
+          Effect: Allow
+          Resource: '*'
+      PolicyName: AccessElastiCacheInfoByEMRRolePolicy
+      Roles:
+      - {Ref: EMREC2Role}
+      - {Ref: EMRRole}
+
+  StateArtifactsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: "order_id"
+        AttributeType: "S"
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+      - AttributeName: "order_id"
+        KeyType: "HASH"
+      TableName: stateful-artifacts
+
+  DevelopmentFilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 
+        {"Fn::Sub": "development-${AWS::AccountId}"}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        LogFilePrefix: "logs/"
+      AccessControl: "LogDeliveryWrite"
+
+  StatefulArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 
+        {"Fn::Sub": "stateful-artifacts-${AWS::AccountId}"}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        LogFilePrefix: "logs/"
+      AccessControl: "LogDeliveryWrite"
+ 
+  StatelessArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 
+        {"Fn::Sub": "stateless-artifacts-${AWS::AccountId}"}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        LogFilePrefix: "logs/"
+      AccessControl: "LogDeliveryWrite"
+
+  CacheParameterGroup:
+    Type: AWS::ElastiCache::ParameterGroup
+    Properties:
+      CacheParameterGroupFamily: "redis6.x"
+      Description: "Cluster-enabled LRU Cache"
+      Properties:
+        cluster-enabled: "yes"
+        maxmemory-policy: "allkeys-lru"
+        activedefrag: "yes"
+ 
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: cache-subnetgroup
+      Description: Subnet group for the ElastiCache
+      SubnetIds:
+      - { Ref: PrivateSubnet1 }
+      - { Ref: PrivateSubnet2 }
+ 
+  CacheSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: 'Security group used by the ElastiCache cluster to control access.'
+      GroupName: 'SLIM-ElastiCache'
+      VpcId: { Ref: VPC }
+      SecurityGroupEgress:
+      - CidrIp: '0.0.0.0/0'
+        FromPort: '0'
+        IpProtocol: -1 # -1 denotes ALL
+        ToPort: '65535'
+
+  CacheSecurityGroupIngressFromEMRCore:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: CacheSecurityGroup
+      SourceSecurityGroupId:
+        Ref: EMRSlaveSecurityGroupPrivateVpc
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+
+  CacheSecurityGroupIngressFromLambda:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId:
+        Ref: CacheSecurityGroup
+      SourceSecurityGroupId:
+        Ref: LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: '0'
+      ToPort: '65535'
+
+  Cache:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: "Cache used by Pre-Fetcher and State Indexer"
+      AutomaticFailoverEnabled: true
+      AtRestEncryptionEnabled: true
+      Engine: "redis"
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 1
+      CacheNodeType: cache.r5.xlarge
+      CacheParameterGroupName: {Ref: CacheParameterGroup}
+      CacheSubnetGroupName: {Ref: CacheSubnetGroup}
+      SecurityGroupIds: [{Ref: CacheSecurityGroup}]
+      TransitEncryptionEnabled: true
+ 
+  PreFetcherEMRCluster:
+    DependsOn:
+    - DefaultPrivateRoute1
+    - DefaultPrivateRoute2
+    Type: AWS::EMR::Cluster
+    Properties:
+      Applications:
+      - Name: Spark
+      Configurations:
+      - Classification: spark-defaults
+        ConfigurationProperties:
+          spark.history.fs.cleaner.enabled: true
+          spark.history.fs.cleaner.interval: 1d
+          spark.history.fs.cleaner.maxAge: 7d
+      Instances:
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m4.large
+          Name: Master
+        CoreInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m5.xlarge
+          Name: Core
+        Ec2SubnetId: { Ref: PrivateSubnet1 }
+        AdditionalSlaveSecurityGroups:
+          - Ref: EMRSlaveSecurityGroupPrivateVpc
+      LogUri:
+        Fn::Join:
+        - '/'
+        - - 's3:/'
+          - {Ref: StatefulArtifactBucket}
+          - 'logs/'
+      JobFlowRole:
+        Ref: EmrEc2InstanceProfile
+      ServiceRole:
+        Ref: EMRRole
+      Name: pre-fetcher
+      ReleaseLabel: 'emr-5.33.1'
+      VisibleToAllUsers: true
+ 
+  StatefulProcessorEMRCluster:
+    DependsOn:
+    - DefaultPrivateRoute1
+    - DefaultPrivateRoute2
+    Type: AWS::EMR::Cluster
+    Properties:
+      Applications:
+      - Name: Spark
+      Configurations:
+      - Classification: spark-defaults
+        ConfigurationProperties:
+          spark.history.fs.cleaner.enabled: true
+          spark.history.fs.cleaner.interval: 1d
+          spark.history.fs.cleaner.maxAge: 7d
+      Instances:
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m4.large
+          Name: Master
+        CoreInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m5.xlarge
+          Name: Core
+        Ec2SubnetId: { Ref: PrivateSubnet1 }
+      JobFlowRole:
+        Ref: EmrEc2InstanceProfile
+      LogUri:
+        Fn::Join:
+        - '/'
+        - - 's3:/'
+          - {Ref: StatefulArtifactBucket}
+          - 'logs/'
+      ServiceRole:
+        Ref: EMRRole
+      Name: stateful-processor
+      ReleaseLabel: 'emr-5.33.1'
+      VisibleToAllUsers: true
+ 
+  StatelessIngestionEMRCluster:
+    DependsOn:
+    - DefaultPrivateRoute1
+    - DefaultPrivateRoute2
+    Type: AWS::EMR::Cluster
+    Properties:
+      Applications:
+      - Name: Spark
+      Configurations:
+      - Classification: spark-defaults
+        ConfigurationProperties:
+          spark.history.fs.cleaner.enabled: true
+          spark.history.fs.cleaner.interval: 1d
+          spark.history.fs.cleaner.maxAge: 7d
+      Instances:
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m4.large
+          Name: Master
+        CoreInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m5.xlarge
+          Name: Core
+        Ec2SubnetId: { Ref: PrivateSubnet1 }
+      LogUri:
+        Fn::Join:
+        - '/'
+        - - 's3:/'
+          - {Ref: StatefulArtifactBucket}
+          - 'logs/'
+      JobFlowRole:
+        Ref: EmrEc2InstanceProfile
+      ServiceRole:
+        Ref: EMRRole
+      Name: stateless-ingestion
+      ReleaseLabel: 'emr-5.33.1'
+      VisibleToAllUsers: true
+ 
+  CloudWatchExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Action: "sts:AssumeRole"
+      Policies:
+      - PolicyName: ExecuteStateMachine
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Action:
+            - "states:StartExecution"
+            Resource:
+            - !Ref StatelessStateMachine
+            - !Ref StatefulStateMachine
+ 
+  StatelessSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: The event to trigger the Stateless State Machine on a regular basis
+      ScheduleExpression: "rate(10 minutes)"
+      State: DISABLED
+      Targets:
+      - Arn:
+          Ref: StatelessStateMachine
+        Id: StatelessStateMachine
+        RoleArn:
+          Fn::GetAtt: [ CloudWatchExecutionRole, Arn ]
+      - Arn:
+          Ref: StatefulStateMachine
+        Id: StatefulStateMachine
+        RoleArn:
+          Fn::GetAtt: [ CloudWatchExecutionRole, Arn ]
+ 
+  StatesExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: states.us-west-2.amazonaws.com
+          Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+      - PolicyName: StatesExecutionPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Action:
+            - "lambda:InvokeFunction"
+            - "elasticmapreduce:DescribeCluster"
+            - "elasticmapreduce:RunJobFlow"
+            - "elasticmapreduce:TerminateJobFlows"
+            - "elasticmapreduce:AddJobFlowSteps"
+            - "elasticmapreduce:DescribeStep"
+            Resource:
+            - Fn::GetAtt: [ StateIndexer, Arn ]
+            - Fn::GetAtt: [ StateIndexerWorker, Arn ]
+            - !Sub "arn:aws:elasticmapreduce:${AWS::Region}:${AWS::AccountId}:cluster/*"
+ 
+  StatelessStateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Properties:
+      StateMachineName: stateless-workflow
+      RoleArn:
+        Fn::GetAtt: [ StatesExecutionRole, Arn ]
+      DefinitionString:
+        Fn::Sub:
+        - |-
+          {
+            "StartAt": "RunStatelessIngestionEngine",
+            "Comment": "Normally, we recommend starting at a Lambda step to poll for work and record the job in DynamoDB.",
+            "States": {
+              "RunStatelessIngestionEngine": {
+                "Type": "Task",
+                "Comment": "Submits a job to the Stateless Ingestion Engine",
+                "Resource": "arn:aws:states:::elasticmapreduce:addStep.sync",
+                "Parameters": {
+                  "ClusterId": "${statelessEMRClusterID}",
+                  "Step": {
+                    "Name": "RunStatelessIngestionEngine",
+                    "ActionOnFailure": "CONTINUE",
+                    "HadoopJarStep": {
+                      "Jar": "command-runner.jar",
+                      "Args.$": "States.Array('spark-submit', '--deploy-mode', 'cluster', '--class', 'com.amazon.aws.blog.StatelessMain', 's3://${developmentBucket}/StatelessStateful-jar-with-dependencies.jar', $.statelessInput, $.statelessOutput)"
+                    }
+                  }
+                },
+                "Retry" : [
+                  {
+                    "ErrorEquals": [ "States.ALL" ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "ResultPath": "$.statelessIngestionOutput",
+                "Next": "DefaultEndStep"
+              },
+              "DefaultEndStep": {
+                "Type": "Pass",
+                "End": true
+              }
+            }
+          }
+        - statelessEMRClusterID:
+            Ref:
+              StatelessIngestionEMRCluster
+          developmentBucket:
+            Ref:
+              DevelopmentFilesBucket
+ 
+ 
+  StatefulStateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Properties:
+      StateMachineName: stateful-workflow
+      RoleArn:
+        Fn::GetAtt: [ StatesExecutionRole, Arn ]
+      DefinitionString:
+        Fn::Sub:
+        - |-
+          {
+            "StartAt": "RunPreFetcher",
+            "Comment": "Normally, we recommend starting at a Lambda step to poll for work, obtain the ElastiCache endpoint, and record the job in DynamoDB.",
+            "States": {
+              "RunPreFetcher": {
+                "Type": "Task",
+                "Comment": "In practice, we recommend preceding this step with a Lambda that enforces the order of stateful workflow processing and updates the job status prior to starting prefetching",
+                "Resource": "arn:aws:states:::elasticmapreduce:addStep.sync",
+                "Parameters": {
+                  "ClusterId": "${prefetcherClusterID}",
+                  "Step": {
+                    "Name": "RunPreFetcher",
+                    "ActionOnFailure": "CONTINUE",
+                    "HadoopJarStep": {
+                      "Jar": "command-runner.jar",
+                      "Args.$": "States.Array('spark-submit', '--deploy-mode', 'cluster', '--class', 'com.amazon.aws.blog.PreFetcherMain', 's3://${developmentBucket}/StatelessStateful-jar-with-dependencies.jar', '${awsAccount}', $.statelessOutput, $.prefetcherOutput, '${elasticacheClusterID}')"
+                    }
+                  }
+                },
+                "Retry" : [
+                  {
+                    "ErrorEquals": [ "States.ALL" ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "ResultPath": "$.emrOutputPreFetcher",
+                "Next": "RunStatefulProcessor"
+              },
+              "RunStatefulProcessor": {
+                "Type": "Task",
+                "Comment": "In practice, we recommend preceding this step with a Lambda that enforces the order of stateful workflow processing and updates the job status prior to starting stateful processing",
+                "Resource": "arn:aws:states:::elasticmapreduce:addStep.sync",
+                "Parameters": {
+                  "ClusterId": "${statefulClusterID}",
+                  "Step": {
+                    "Name": "RunStatefulProcessor",
+                    "ActionOnFailure": "CONTINUE",
+                    "HadoopJarStep": {
+                      "Jar": "command-runner.jar",
+                      "Args.$": "States.Array('spark-submit', '--deploy-mode', 'cluster', '--class', 'com.amazon.aws.blog.StatefulMain', 's3://${developmentBucket}/StatelessStateful-jar-with-dependencies.jar', $.statelessOutput, $.prefetcherOutput, $.statefulOutput)"
+                    }
+                  }
+                },
+                "Retry" : [
+                  {
+                    "ErrorEquals": [ "States.ALL" ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "ResultPath": "$.emrOutputStateful",
+                "Next": "RunStateIndexer"
+              },
+              "RunStateIndexer": {
+                "Type": "Task",
+                "Comment": "In practice, we recommend preceding this step with a Lambda that enforces the order of stateful workflow processing and updates the job status prior to starting state indexing",
+                "Resource": "${stateIndexerArn}",
+                "Next": "DefaultEndStep",
+                "ResultPath": "$.stateIndexerResult",
+                "Retry": [
+                  {
+                    "ErrorEquals": [
+                      "States.Timeout",
+                      "States.TaskFailed"
+                    ],
+                    "IntervalSeconds": 15,
+                    "BackoffRate": 1.5,
+                    "MaxAttempts": 10
+                  }
+                ]
+              },
+              "DefaultEndStep": {
+                "Type": "Pass",
+                "End": true
+              }
+            }
+          }
+        - prefetcherClusterID:
+            Ref:
+              PreFetcherEMRCluster
+          statefulClusterID:
+            Ref:
+              StatefulProcessorEMRCluster
+          stateIndexerArn:
+            Fn::GetAtt:
+            - StateIndexer
+            - Arn
+          awsAccount:
+            Ref:
+              "AWS::AccountId"
+          elasticacheClusterID:
+            Ref:
+              Cache
+          developmentBucket:
+            Ref:
+              DevelopmentFilesBucket
+ 
+  StateIndexer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: 'com.amazon.aws.blog.StateIndexerLambdaImpl::runStateIndexerCoordinator'
+      Runtime: java11
+      CodeUri: lambda
+      Environment:
+        Variables:
+          ELASTICACHE_ID: {Ref: Cache}
+          STATE_INDEXER_WORKER_NAME: {Ref: StateIndexerWorker}
+          AWS_ACCOUNT: {Ref: "AWS::AccountId"}
+      Description: Runs the State Indexer Coordinator
+      Timeout: 900
+      MemorySize: 1024
+      Role:
+        Fn::GetAtt: [LambdaRole, Arn]
+      VpcConfig:
+        SecurityGroupIds:
+        - { Ref: LambdaSecurityGroup }
+        SubnetIds:
+        - { Ref: PrivateSubnet1 }
+        - { Ref: PrivateSubnet2 }
+ 
+  StateIndexerWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: 'com.amazon.aws.blog.StateIndexerLambdaImpl::runStateIndexerWorker'
+      Runtime: java11
+      CodeUri: lambda
+      Environment:
+        Variables:
+          ELASTICACHE_ID: {Ref: Cache}
+          AWS_ACCOUNT: {Ref: "AWS::AccountId"}
+      Description: Runs the State Indexer Worker
+      Timeout: 900
+      MemorySize: 1024
+      Role:
+        Fn::GetAtt: [LambdaWorkerRole, Arn]
+      VpcConfig:
+        SecurityGroupIds:
+        - { Ref: LambdaSecurityGroup }
+        SubnetIds:
+        - { Ref: PrivateSubnet1 }
+        - { Ref: PrivateSubnet2 }
+ 
+  LambdaRole:
+    Properties:
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+        Version: '2012-10-17'
+      Policies:
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'lambda:InvokeFunction'
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              Effect: Allow
+              Resource:
+                - Fn::GetAtt: [ StateIndexerWorker, Arn ]
+                - Fn::GetAtt: [ StatefulArtifactBucket, Arn ]
+                - {"Fn::Sub": "arn:aws:s3:::stateful-artifacts-${AWS::AccountId}/*"}
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleActions
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'elasticache:DescribeReplicationGroups'
+              Effect: Allow
+              Resource: "*"
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleElastiCache
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:DescribeNetworkInterfaces'
+              - 'ec2:DeleteNetworkInterface'
+              Effect: Allow
+              Resource: "*"
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleVPC
+    Type: AWS::IAM::Role
+
+  LambdaWorkerRole:
+    Properties:
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+        Version: '2012-10-17'
+      Policies:
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'dynamodb:GetItem'
+              - 'dynamodb:PutItem'
+              - 'dynamodb:UpdateItem'
+              - 'dynamodb:ConditionCheckItem'
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              Effect: Allow
+              Resource:
+                - Fn::GetAtt: [ StateArtifactsTable, Arn ]
+                - Fn::GetAtt: [ StatefulArtifactBucket, Arn ]
+                - {"Fn::Sub": "arn:aws:s3:::stateful-artifacts-${AWS::AccountId}/*"}
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleActions
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'elasticache:DescribeReplicationGroups'
+              Effect: Allow
+              Resource: "*"
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleElastiCache
+        - PolicyDocument:
+            Statement:
+            - Action:
+              - 'ec2:CreateNetworkInterface'
+              - 'ec2:DescribeNetworkInterfaces'
+              - 'ec2:DeleteNetworkInterface'
+              Effect: Allow
+              Resource: "*"
+            Version: '2012-10-17'
+          PolicyName: lambdaRoleVPC
+    Type: AWS::IAM::Role
+Outputs:
+  StackArn:
+    Value:
+      Ref: AWS::StackId
+    Description: Use this as the stack_arn in your cloud_formation_deployment_stack override.
