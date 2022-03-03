@@ -79,7 +79,7 @@ df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
    .parquet(output,compression=codec)
 ```
 
-The script can be eaily changed to write the final output in ORC files instead of Parquet.
+The script can be easily changed to write the final output in ORC files instead of Parquet.
 ```
 codec='zlib'
 df.repartition(*partitionby).write.partitionBy(partitionby).mode("append") \
