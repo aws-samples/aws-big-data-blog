@@ -1,0 +1,401 @@
+{
+  "Description":"CloudFormation template to create required AWS resources for emr-step-functions blog",
+  "Metadata" : {
+    "AWS::CloudFormation::Interface" : {
+        "ParameterGroups" : [{
+            "Label" : { "default" : "EMR Cluster Configuration" },
+            "Parameters" : [ "SubnetID", "KeyName", "VPCID" ]
+        },{
+            "Label" : { "default":"Spark ETL Configuration" },
+            "Parameters" : [ "S3RootPath" ]
+        }],
+        "ParameterLabels" : {
+          "SubnetID" : { "default" : "Subnet ID: " },
+          "KeyName": { "default": "Key pair name: " },
+          "VPCID": { "default": "VPC ID: " },
+          "S3RootPath" : { "default" : "S3 Root Path: " }
+        }
+    }
+  },
+  "Parameters": {
+    "SubnetID": {
+      "Description": "ID of an existing subnet for the Amazon EMR cluster",
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "KeyName": {
+      "Description": "Name of an existing EC2 key pair to access the Amazon EMR cluster",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "S3RootPath":{
+          "Type": "String",
+          "Description": "S3 path where input and output data for Spark will be stored",
+          "AllowedPattern": "^s3://([^/]+)(.*?([^/]+)/?)$"
+    },
+    "VPCID": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "ID of an existing VPC where Amazon EMR cluster will be deployed"
+    }
+  },
+  "Resources":{
+    "EMRCluster":{
+      "Type":"AWS::EMR::Cluster",
+      "Properties":{
+        "Name":"EMR-Step-Functions",
+        "JobFlowRole":"EMR_EC2_DefaultRole",
+        "ServiceRole":"EMR_DefaultRole",
+        "ReleaseLabel":"emr-5.12.0",
+        "VisibleToAllUsers":"true",
+        "Instances": {
+          "HadoopVersion": "2.8.3",
+          "TerminationProtected": false,
+          "Ec2KeyName": {
+            "Ref": "KeyName"
+          },
+          "Ec2SubnetId": {
+            "Ref": "SubnetID"
+          },
+          "MasterInstanceGroup": {
+            "InstanceCount": 1,
+            "InstanceType": "m4.xlarge",
+            "Market": "ON_DEMAND",
+            "Name": "Master"
+          },
+          "CoreInstanceGroup": {
+            "InstanceCount": 2,
+            "InstanceType": "m4.2xlarge",
+            "Market": "ON_DEMAND",
+            "Name": "Core"
+          },
+          "AdditionalMasterSecurityGroups": [{ "Ref" : "LambdaSecurityGroup" }]
+        },
+        "BootstrapActions":[
+          {
+            "Name" : "setup-spark-jobs",
+            "ScriptBootstrapAction" :
+            {
+              "Args" : [ { "Ref": "S3RootPath" } ],
+              "Path" : "s3://tm-blog-content/emr-step-functions/setup-s3-for-spark.sh"
+            }
+          }
+        ],
+        "Applications":[
+          {
+            "Name":"Hadoop"
+          },
+          {
+            "Name":"Livy"
+          },
+          {
+            "Name":"Spark"
+          },
+          {
+            "Name":"Hive"
+          }
+        ],
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":"EMR-Step-Functions"
+          }
+        ]
+      }
+    },
+    "LambdaStateMachineRole":{
+      "Type":"AWS::IAM::Role",
+      "Properties":{
+        "RoleName":"blog-lambda-state-machine-role",
+        "Path": "/",
+        "AssumeRolePolicyDocument":{
+          "Version":"2012-10-17",
+          "Statement":[
+            {
+              "Effect":"Allow",
+              "Principal":{
+                "Service":[
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action":[
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns":[
+          "arn:aws:iam::aws:policy/AWSLambdaFullAccess",
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+          "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
+        ]
+      }
+    },
+    "StepFunctionsStateExecutionRole":{
+      "Type":"AWS::IAM::Role",
+      "Properties":{
+        "RoleName":"blog-step-functions-state-execution-role",
+        "Path": "/",
+        "AssumeRolePolicyDocument":{
+          "Version":"2012-10-17",
+          "Statement":[
+            {
+              "Effect":"Allow",
+              "Principal":{
+                "Service":[
+                   "states.us-east-1.amazonaws.com",
+                   "states.us-east-2.amazonaws.com",
+                   "states.us-west-2.amazonaws.com",
+                   "states.ap-northeast-1.amazonaws.com",
+                   "states.ap-southeast-1.amazonaws.com",
+                   "states.ap-southeast-2.amazonaws.com",
+                   "states.ca-central-1.amazonaws.com",
+                   "states.eu-central-1.amazonaws.com",
+                   "states.eu-west-1.amazonaws.com",
+                   "states.eu-west-2.amazonaws.com"
+                ]
+              },
+              "Action":[
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies":[
+          {
+            "PolicyName":"state-execution-policy",
+            "PolicyDocument":{
+              "Version":"2012-10-17",
+              "Statement":[
+                {
+                  "Effect":"Allow",
+                  "Action":[
+                    "lambda:InvokeFunction"
+                  ],
+                  "Resource":"*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SparkJobStatusFunction":{
+      "Type":"AWS::Lambda::Function",
+      "Properties":{
+        "Handler":"index.lambda_handler",
+        "FunctionName":"blog-spark-job-status-function",
+        "Role": { "Fn::GetAtt" : [ "LambdaStateMachineRole" , "Arn" ]},
+        "Code":{
+          "ZipFile":{
+            "Fn::Join":[
+              "\n",
+              [
+                "from botocore.vendored import requests",
+                "import json",
+                "def lambda_handler(event, context):",
+                "  jobid = event.get('jobId')",
+                { "Fn::Join":[ "",["  url = 'http://",{"Fn::GetAtt" : ["EMRCluster", "MasterPublicDNS"]},":8998/batches/' + str(jobid)"]]},
+                "  res = requests.get(url)",
+                "  json_data = json.loads(res.text)",
+                "  return json_data.get('state')"
+              ]
+            ]
+          }
+        },
+        "Runtime":"python3.6",
+        "Timeout":"25",
+        "TracingConfig":{
+          "Mode":"Active"
+        },
+        "VpcConfig":{
+          "SecurityGroupIds" : [ { "Ref" : "LambdaSecurityGroup" } ],
+          "SubnetIds" : [ { "Ref": "SubnetID"} ]
+        }
+      }
+    },
+    "MilesPerRateJobSubmitFunction":{
+      "Type":"AWS::Lambda::Function",
+      "Properties":{
+        "Handler":"index.lambda_handler",
+        "FunctionName":"blog-miles-per-rate-job-submit-function",
+        "Role": { "Fn::GetAtt" : [ "LambdaStateMachineRole" , "Arn" ]},
+        "Code":{
+          "ZipFile":{
+            "Fn::Join":[
+              "\n",
+              [
+                "from botocore.vendored import requests",
+                "import json",
+                "def lambda_handler(event, context):",
+                "  headers = { \"content-type\": \"application/json\" }",
+                { "Fn::Join":[ "",["  url = 'http://",{"Fn::GetAtt" : ["EMRCluster", "MasterPublicDNS"]},":8998/batches'"]]},
+                "  payload = {",
+                { "Fn::Join":[ "",["    'file' : '",{"Ref": "S3RootPath"},"/emr-step-functions/spark-taxi.jar',"]]},
+                "    'className' : 'com.example.MilesPerRateCode',",
+                "    'args' : [event.get('rootPath')]",
+                "  }",
+                "  res = requests.post(url, data = json.dumps(payload), headers = headers, verify = False)",
+                "  json_data = json.loads(res.text)",
+                "  return json_data.get('id')"
+              ]
+            ]
+          }
+        },
+        "Runtime":"python3.6",
+        "Timeout":"25",
+        "TracingConfig":{
+          "Mode":"Active"
+        },
+        "VpcConfig":{
+          "SecurityGroupIds" : [ { "Ref" : "LambdaSecurityGroup" } ],
+          "SubnetIds" : [ { "Ref": "SubnetID"} ]
+        }
+      }
+    },
+    "RateCodeStatusJobSubmitFunction":{
+      "Type":"AWS::Lambda::Function",
+      "Properties":{
+        "Handler":"index.lambda_handler",
+        "FunctionName":"blog-rate-code-status-job-submit-function",
+        "Role": { "Fn::GetAtt" : [ "LambdaStateMachineRole" , "Arn" ]},
+        "Code":{
+          "ZipFile":{
+            "Fn::Join":[
+              "\n",
+              [
+                "from botocore.vendored import requests",
+                "import json",
+                "def lambda_handler(event, context):",
+                "  headers = { \"content-type\": \"application/json\" }",
+                { "Fn::Join":[ "",["  url = 'http://",{"Fn::GetAtt" : ["EMRCluster", "MasterPublicDNS"]},":8998/batches'"]]},
+                "  payload = {",
+                { "Fn::Join":[ "",["    'file' : '",{"Ref": "S3RootPath"},"/emr-step-functions/spark-taxi.jar',"]]},
+                "    'className' : 'com.example.RateCodeStatus',",
+                "    'args' : [event.get('rootPath')]",
+                "  }",
+                "  res = requests.post(url, data = json.dumps(payload), headers = headers, verify = False)",
+                "  json_data = json.loads(res.text)",
+                "  return json_data.get('id')"
+              ]
+            ]
+          }
+        },
+        "Runtime":"python3.6",
+        "Timeout":"25",
+        "TracingConfig":{
+          "Mode":"Active"
+        },
+        "VpcConfig":{
+          "SecurityGroupIds" : [ { "Ref" : "LambdaSecurityGroup" } ],
+          "SubnetIds" : [ { "Ref": "SubnetID"} ]
+        }
+      }
+    },
+    "LambdaSecurityGroup":{
+        "Type": "AWS::EC2::SecurityGroup",
+        "Properties" : { 
+            "VpcId" : { "Ref" : "VPCID" },
+            "GroupName": "lambda-sec-group",
+            "GroupDescription" : "Security group for Lambda function",
+            "SecurityGroupIngress" : [{
+                "IpProtocol" : "tcp",
+                "FromPort"   : 8998,
+                "ToPort"     : 8998,
+                "CidrIp"     : "0.0.0.0/0"
+            }]
+        }
+    },
+    "SparkETLStateMachine" : {
+      "Type" : "AWS::StepFunctions::StateMachine",
+      "Properties" : {
+        "StateMachineName" : "Spark-ETL-State-Machine",
+        "DefinitionString" : {
+          "Fn::Join":[
+            "\n",
+            [
+              "{",
+              "   \"Comment\": \"Spark ETL State Machine\",",
+              "   \"StartAt\": \"MilesPerRate Job\",",
+              "   \"States\": {",
+              "       \"MilesPerRate Job\": {",
+              "           \"Type\": \"Task\",",
+              { "Fn::Join":[ "", ["           \"Resource\": \"", {"Fn::GetAtt" : ["MilesPerRateJobSubmitFunction", "Arn"]},"\","]]},
+              "           \"ResultPath\": \"$.jobId\",",
+              "           \"Next\": \"Wait for MilesPerRate job to complete\"",
+              "       },",
+              "       \"Wait for MilesPerRate job to complete\": {",
+              "           \"Type\": \"Wait\",",
+              "           \"Seconds\": 15,",
+              "           \"Next\": \"Query MilesPerRate job status\"",
+              "       },",
+              "       \"Query MilesPerRate job status\": {",
+              "           \"Type\": \"Task\",",
+              { "Fn::Join":[ "", ["           \"Resource\": \"", {"Fn::GetAtt" : ["SparkJobStatusFunction", "Arn"]},"\","]]},
+              "           \"Next\": \"MilesPerRate job complete?\",",
+              "           \"ResultPath\": \"$.jobStatus\"",
+              "       },",
+              "       \"MilesPerRate job complete?\": {",
+              "           \"Type\": \"Choice\",",
+              "           \"Choices\": [{",
+              "               \"Variable\": \"$.jobStatus\",",
+              "               \"StringEquals\": \"success\",",
+              "               \"Next\": \"RateCodeStatus Job\"",
+              "           },{",
+              "               \"Variable\": \"$.jobStatus\",",
+              "               \"StringEquals\": \"dead\",",
+              "               \"Next\": \"MilesPerRate job failed\"",
+              "           }],",
+              "           \"Default\": \"Wait for MilesPerRate job to complete\"",
+              "       },",
+              "       \"MilesPerRate job failed\": {",
+              "           \"Type\": \"Fail\",",
+              "           \"Error\": \"MilesPerRate Job\",",
+              "           \"Cause\": \"MilesPerRate job job did not complete successfully. Please check logs.\"",
+              "       },",
+              "       \"RateCodeStatus Job\": {",
+              "           \"Type\": \"Task\",",
+              { "Fn::Join":[ "", ["           \"Resource\": \"", {"Fn::GetAtt" : ["RateCodeStatusJobSubmitFunction", "Arn"]},"\","]]},
+              "           \"ResultPath\": \"$.jobId\",",
+              "           \"Next\": \"Wait for RateCodeStatus job to complete\"",
+              "       },",
+              "       \"Wait for RateCodeStatus job to complete\": {",
+              "           \"Type\": \"Wait\",",
+              "           \"Seconds\": 15,",
+              "           \"Next\": \"Query RateCodeStatus job status\"",
+              "       },",
+              "       \"Query RateCodeStatus job status\": {",
+              "           \"Type\": \"Task\",",
+              { "Fn::Join":[ "", ["           \"Resource\": \"", {"Fn::GetAtt" : ["SparkJobStatusFunction", "Arn"]},"\","]]},
+              "           \"Next\": \"RateCodeStatus job complete?\",",
+              "           \"ResultPath\": \"$.jobStatus\"",
+              "       },",
+              "       \"RateCodeStatus job complete?\": {",
+              "       \"Type\": \"Choice\",",
+              "       \"Choices\": [{",
+              "               \"Variable\": \"$.jobStatus\",",
+              "               \"StringEquals\": \"success\",",
+              "               \"Next\": \"RateCodeStatus job finished\"",
+              "           },{",
+              "               \"Variable\": \"$.jobStatus\",",
+              "               \"StringEquals\": \"dead\",",
+              "               \"Next\": \"RateCodeStatus job failed\"",
+              "           }],",
+              "           \"Default\": \"Wait for RateCodeStatus job to complete\"",
+              "       },",
+              "       \"RateCodeStatus job failed\": {",
+              "           \"Type\": \"Fail\",",
+              "           \"Error\": \"RateCodeStatus Job\",",
+              "           \"Cause\": \"RateCodeStatus job did not complete successfully. Please check logs.\"",
+              "       },",
+              "       \"RateCodeStatus job finished\": {",
+              "           \"Type\": \"Pass\",",
+              "           \"End\": true",
+              "       }",
+              "   }",
+              "}"
+            ]
+          ]
+        },
+        "RoleArn" : { "Fn::GetAtt" : [ "StepFunctionsStateExecutionRole" , "Arn" ]}
+      }
+    }
+  }
+}
