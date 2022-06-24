@@ -18,8 +18,8 @@ print "\nFound "+str(len(tables))+" tables in database..."
 
 with open(schema+filename,mode='w+') as output:
    for t in tables:
-      output.write('!echo DROP TABLE IF EXISTS `'+t[:-1]+'`\;;\n')
-      output.write('show create table '+t[:-1]+';\n')
+      output.write('!echo DROP TABLE IF EXISTS `'+schema+'.'+t[:-1]+'`\;;\n')
+      output.write('show create table '+schema+'.'+t[:-1]+';\n')
       output.write(separator+'\n')
 
 command="hive -f "+schema+"_tables.hql -S >> "+schema+".output"
