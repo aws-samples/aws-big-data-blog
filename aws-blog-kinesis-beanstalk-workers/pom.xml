@@ -6,7 +6,7 @@
 	<version>.9.2.0</version>
 	<packaging>war</packaging>
 	<properties>
-		<aws-sdk-version>1.9.37</aws-sdk-version>
+		<aws-sdk-version>1.12.261</aws-sdk-version>
 	</properties>
 	<build>
 		<defaultGoal>clean compile war:war</defaultGoal>
