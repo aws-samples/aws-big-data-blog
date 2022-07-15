@@ -6,7 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 
 	<properties>
-		<aws.version>1.10.8</aws.version>
+		<aws.version>1.12.261</aws.version>
 	</properties>
 
 	<build>
